@@ -289,6 +289,11 @@ void BotClient::shakedProcess(){
         heartTask->cancel();
     }
     heartTask = HuHoBot::getInstance().setHeartTask();
+    //取消上一个自动重连任务
+    if(reconnectTask != nullptr){
+        reconnectTask->cancel();
+        reconnectTask = nullptr;
+    }
 }
 
 //////////////////////////////////// Event Handler /////////////////////////////////////

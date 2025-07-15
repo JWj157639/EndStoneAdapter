@@ -57,3 +57,33 @@ std::vector<T> tools::filterSet(const std::set<T>& original,
                  std::back_inserter(result), predicate);
     return result;
 }
+
+std::string& replaceAll(std::string& str, std::string_view oldValue, std::string_view newValue) {
+    for (std::string::size_type pos(0); pos != std::string::npos; pos += newValue.length()) {
+        if ((pos = str.find(oldValue, pos)) != std::string::npos) str.replace(pos, oldValue.length(), newValue);
+        else break;
+    }
+    return str;
+}
+std::string replaceAll(std::string const& str, std::string_view oldValue, std::string_view newValue) {
+    std::string ret = str;
+    replaceAll(ret, oldValue, newValue);
+    return ret;
+}
+
+std::wstring str2wstr(std::string_view str, unsigned int codePage) {
+    int          len = MultiByteToWideChar(codePage, 0, str.data(), (int)str.size(), nullptr, 0);
+    std::wstring wstr;
+    if (len == 0) return wstr;
+    wstr.resize(len);
+    MultiByteToWideChar(codePage, 0, str.data(), (int)str.size(), wstr.data(), len);
+    return wstr;
+}
+std::string wstr2str(std::wstring_view wstr, unsigned int codePage) {
+    int         len = WideCharToMultiByte(codePage, 0, wstr.data(), (int)wstr.size(), nullptr, 0, nullptr, nullptr);
+    std::string str;
+    if (len == 0) return str;
+    str.resize(len);
+    WideCharToMultiByte(codePage, 0, wstr.data(), (int)wstr.size(), str.data(), (int)str.size(), nullptr, nullptr);
+    return str;
+}
