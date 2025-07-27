@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 接收用户传入参数，设置默认值
-set(HUHOBOT_SERVER_URL "ws://127.0.0.1:8888" CACHE STRING "WebSocket server URL")
+set(HUHOBOT_SERVER_URL "ws://127.0.0.1:2087" CACHE STRING "WebSocket server URL")
 
 # 生成配置文件
 configure_file(
