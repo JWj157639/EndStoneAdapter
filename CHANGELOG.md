@@ -1,4 +1,5 @@
-# HuHoBot-EndStone-Adapter v0.0.9
+# HuHoBot-EndStone-Adapter v0.1.0
 
-fix(client): 修复客户端断开连接时未取消自动重连任务的问题
-- 在断开连接时添加了取消自动重连任务的逻辑
+update(lib): 
+- 适配Endstone 0.10.0
+- 将 C++ 标准从 17 升级到20

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 project(huhobot CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 接收用户传入参数，设置默认值
@@ -18,7 +18,7 @@ include(FetchContent)
 FetchContent_Declare(
         endstone
         GIT_REPOSITORY https://github.com/EndstoneMC/endstone.git
-        GIT_TAG "v0.9.0"
+        GIT_TAG "v0.10.0"
 )
 FetchContent_MakeAvailable(endstone)
 
