@@ -366,11 +366,13 @@ void BotClient::handler_add(string packId,json &body) {
     string cmd = "allowlist add \""+XboxId+"\"";
     auto [output, isSuccess] = HuHoBot::getInstance().runCommand(cmd);
     if(isSuccess){
-        json rBody = {{"msg", output}};
+        int callbackConvertImg = ConfigManager::Get().GetCallbackConvertImg();
+        json rBody = {{"msg", output,"callbackConvertImg",callbackConvertImg}};
         sendMessage(ServerSendEvent::success, rBody, packId);
     }else{
-        json errorBody = {{"msg", output}};
-        sendMessage(ServerSendEvent::error, errorBody, packId);
+        int callbackConvertImg = ConfigManager::Get().GetCallbackConvertImg();
+        json rBody = {{"msg", output,"callbackConvertImg",callbackConvertImg}};
+        sendMessage(ServerSendEvent::error, rBody, packId);
     }
 }
 
@@ -380,10 +382,12 @@ void BotClient::handler_delete_(string packId,json &body) {
     auto [output, isSuccess] = HuHoBot::getInstance().runCommand(cmd);
 
     if(isSuccess){
-        json rBody = {{"msg", output}};
+        int callbackConvertImg = ConfigManager::Get().GetCallbackConvertImg();
+        json rBody = {{"msg", output,"callbackConvertImg",callbackConvertImg}};
         sendMessage(ServerSendEvent::success, rBody, packId);
     }else{
-        json errorBody = {{"msg", output}};
+        int callbackConvertImg = ConfigManager::Get().GetCallbackConvertImg();
+        json errorBody = {{"msg", output,"callbackConvertImg",callbackConvertImg}};
         sendMessage(ServerSendEvent::error, errorBody, packId);
     }
 }
@@ -393,10 +397,12 @@ void BotClient::handler_cmd(string packId,json &body) {
     auto [output, isSuccess] = HuHoBot::getInstance().runCommand(cmd);
 
     if(isSuccess){
-        json rBody = {{"msg", output}};
+        int callbackConvertImg = ConfigManager::Get().GetCallbackConvertImg();
+        json rBody = {{"msg", output,"callbackConvertImg",callbackConvertImg}};
         sendMessage(ServerSendEvent::success, rBody, packId);
     }else{
-        json errorBody = {{"msg", output}};
+        int callbackConvertImg = ConfigManager::Get().GetCallbackConvertImg();
+        json errorBody = {{"msg", output,"callbackConvertImg",callbackConvertImg}};
         sendMessage(ServerSendEvent::error, errorBody, packId);
     }
 }
@@ -588,10 +594,12 @@ void BotClient::handler_run(string packId,json &body, bool isAdmin) {
 
         // 执行命令
         if(isSuccess){
-            json rBody = {{"msg", output}};
+            int callbackConvertImg = ConfigManager::Get().GetCallbackConvertImg();
+            json rBody = {{"msg", output,"callbackConvertImg",callbackConvertImg}};
             sendMessage(ServerSendEvent::success, rBody, packId);
         }else{
-            json errorBody = {{"msg", output}};
+            int callbackConvertImg = ConfigManager::Get().GetCallbackConvertImg();
+            json errorBody = {{"msg", output,"callbackConvertImg",callbackConvertImg}};
             sendMessage(ServerSendEvent::error, errorBody, packId);
         }
 

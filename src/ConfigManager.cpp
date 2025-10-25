@@ -49,7 +49,7 @@ void ConfigManager::Save() {
 
 void ConfigManager::InitDefaults() {
     // 版本号自动升级
-    if (!data_.contains("version") || data_["version"] < 2) {
+    if (!data_.contains("version") || data_["version"] < 3) {
 
         data_["version"] = version_;
     }
@@ -104,6 +104,10 @@ void ConfigManager::InitDefaults() {
                 {"管理加白名", "whitelist add &1", 1}
         };
     }
+
+    if(!data_.contains("callbackConvertImg")){
+        data_["callbackConvertImg"] = 0;
+    }
 }
 
 // Getter实现
@@ -145,6 +149,10 @@ std::string ConfigManager::GetServerName() const {
 
 std::vector<CustomCommand> ConfigManager::GetCustomCommands() const {
     return data_["customCommand"];
+}
+
+int ConfigManager::GetCallbackConvertImg() const {
+    return data_["callbackConvertImg"];
 }
 
 // Setter实现

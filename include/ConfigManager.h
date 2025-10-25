@@ -29,6 +29,7 @@ public:
     std::string GetMotdUrl() const;
     std::string GetServerName() const;
     std::vector<CustomCommand> GetCustomCommands() const;
+    int GetCallbackConvertImg() const;
 
     // 配置设置接口
     void SetServerId(const std::string& id);
@@ -45,7 +46,7 @@ private:
 
     json data_;
     std::string path_;
-    int version_ = 2;
+    int version_ = 3;
 };
 
 

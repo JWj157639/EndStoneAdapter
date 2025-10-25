@@ -1,5 +1,7 @@
-# HuHoBot-EndStone-Adapter v0.1.1
+# HuHoBot-EndStone-Adapter v0.1.2
 
 update(lib): 
-- 适配Endstone 0.10.4
-- 修复部分情况下出现的崩服错误
+- 适配Endstone 0.10.7
+
+feat(config):
+- 添加`callbackConvertImg`配置项
