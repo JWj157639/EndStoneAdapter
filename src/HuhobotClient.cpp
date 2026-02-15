@@ -108,9 +108,9 @@ BotClient::BotClient(endstone::Logger *logger) {
 
 void BotClient::connect(){
     logger->info("正在连接服务器...");
-    client.Connect(serverUrl);
-    client.OnTextReceived([this](cyanray::WebSocketClient& ws, std::string msg) { // 使用成员函数捕获
-        this->onTextMsg(msg); // 将消息转发给成员函数
+    // 先注册回调，再连接，避免连接后消息到达时回调还未设置
+    client.OnTextReceived([this](cyanray::WebSocketClient& ws, std::string msg) {
+        this->onTextMsg(msg);
     });
     client.OnError([this](cyanray::WebSocketClient& ws, std::string msg) {
         this->onError(msg);
@@ -118,6 +118,7 @@ void BotClient::connect(){
     client.OnLostConnection([this](cyanray::WebSocketClient& ws, int code) {
         this->onLost(code);
     });
+    client.Connect(serverUrl);
     logger->info("连接服务器成功.");
     logger->info("正在握手...");
     shakeHand();
@@ -125,11 +126,19 @@ void BotClient::connect(){
 
 void BotClient::reconnect() {
     logger->info("正在重连服务器...");
-    if(client.GetStatus() == WebSocketClient::Status::Open){
-        client.Shutdown();
-        shouldReconnect = false;
+    try {
+        if(client.GetStatus() == WebSocketClient::Status::Open){
+            client.Shutdown();
+            shouldReconnect = false;
+        }
+        connect();
+    } catch (const std::exception& e) {
+        logger->error("重连失败: {}", e.what());
+        shouldReconnect = true;
+        if(reconnectTask == nullptr){
+            reconnectTask = HuHoBot::getInstance().setReconnectTask();
+        }
     }
-    connect();
 }
 
 void BotClient::task_reconnect(){
@@ -146,66 +155,68 @@ void BotClient::task_reconnect(){
 }
 
 void BotClient::onTextMsg(string& msg){
-    //logger->info("收到服务器消息：" + msg);
-    json msgJson = json::parse(msg);
-    json header = msgJson["header"];
-    string type_str = header["type"];
-    ServerRecvEvent event_type = EnumConverter::FromString(type_str);
-    string packId = header["id"];
-    json body = msgJson["body"];
+    try {
+        json msgJson = json::parse(msg);
+        json header = msgJson["header"];
+        string type_str = header["type"];
+        ServerRecvEvent event_type = EnumConverter::FromString(type_str);
+        string packId = header["id"];
+        json body = msgJson["body"];
 
-    switch (event_type) {
-        case ServerRecvEvent::sendConfig:
-            handler_sendConfig(packId,body);
-            break;
-        case ServerRecvEvent::chat:
-            handler_chat(packId,body);
-            break;
-        case ServerRecvEvent::add:
-            handler_add(packId,body);
-            break;
-        case ServerRecvEvent::delete_:
-            handler_delete_(packId,body);
-            break;
-        case ServerRecvEvent::cmd:
-            handler_cmd(packId,body);
-            break;
-        case ServerRecvEvent::queryList:
-            handler_queryList(packId,body);
-            break;
-        case ServerRecvEvent::queryOnline:
-            handler_queryOnline(packId,body);
-            break;
-        case ServerRecvEvent::shutdown:
-            handler_shutdown(packId,body);
-            break;
-        case ServerRecvEvent::run:
-            handler_run(packId,body,false);
-            break;
-        case ServerRecvEvent::runAdmin:
-            handler_run(packId,body,true);
-            break;
-        case ServerRecvEvent::heart:
-            handler_heart(packId,body);
-            break;
-        case ServerRecvEvent::bindRequest:
-            handler_bindRequest(packId,body);
-            break;
-        case ServerRecvEvent::shaked:
-            handler_shaked(packId,body);
-            break;
-        default:
-            logger->error("未知事件类型:{}", type_str);
+        switch (event_type) {
+            case ServerRecvEvent::sendConfig:
+                handler_sendConfig(packId,body);
+                break;
+            case ServerRecvEvent::chat:
+                handler_chat(packId,body);
+                break;
+            case ServerRecvEvent::add:
+                handler_add(packId,body);
+                break;
+            case ServerRecvEvent::delete_:
+                handler_delete_(packId,body);
+                break;
+            case ServerRecvEvent::cmd:
+                handler_cmd(packId,body);
+                break;
+            case ServerRecvEvent::queryList:
+                handler_queryList(packId,body);
+                break;
+            case ServerRecvEvent::queryOnline:
+                handler_queryOnline(packId,body);
+                break;
+            case ServerRecvEvent::shutdown:
+                handler_shutdown(packId,body);
+                break;
+            case ServerRecvEvent::run:
+                handler_run(packId,body,false);
+                break;
+            case ServerRecvEvent::runAdmin:
+                handler_run(packId,body,true);
+                break;
+            case ServerRecvEvent::heart:
+                handler_heart(packId,body);
+                break;
+            case ServerRecvEvent::bindRequest:
+                handler_bindRequest(packId,body);
+                break;
+            case ServerRecvEvent::shaked:
+                handler_shaked(packId,body);
+                break;
+            default:
+                logger->error("未知事件类型:{}", type_str);
+        }
+    } catch (const json::exception& e) {
+        logger->error("消息解析失败: {}", e.what());
+    } catch (const std::exception& e) {
+        logger->error("消息处理异常: {}", e.what());
     }
-
 }
 
 void BotClient::onError(std::string &errorMsg) {
-    logger->error("WebSocket连接错误:{}", errorMsg);
-    logger->info("正在尝试重新连接...");
-    if(reconnectTask == nullptr){
-        reconnectTask = HuHoBot::getInstance().setReconnectTask();
-    }
+    logger->error("WebSocket错误:{}", errorMsg);
+    // 只记录日志，不再由 onError 触发重连
+    // 真正的连接断开由 onLost 处理，避免 select error 等临时错误导致不必要的重连
 }
 
 void BotClient::onLost(int code) {

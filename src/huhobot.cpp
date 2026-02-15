@@ -29,13 +29,13 @@ void HuHoBot::onLoad(){
 }
 
 void HuHoBot::onEnable() {
-    client = new BotClient(&getLogger());
+    client = std::make_unique<BotClient>(&getLogger());
 
     //注册事件
     registerEvent(&HuHoBot::onPlayerChat, *this);
 
     //检测是否已经生成hashKey
-    ConfigManager config = ConfigManager();
+    ConfigManager& config = ConfigManager::Get();
     if(config.GetHashKey() == ""){
         string serverId = config.GetServerId();
         getLogger().warning("服务器尚未在机器人进行绑定，请在群内输入\"/绑定 " + serverId + "\"");
@@ -47,7 +47,7 @@ void HuHoBot::onEnable() {
 void HuHoBot::onPlayerChat(endstone::PlayerChatEvent &event){
     string msg = event.getMessage();
     string playerName = event.getPlayer().getName();
-    ConfigManager config = ConfigManager::Get();
+    ConfigManager& config = ConfigManager::Get();
 
     //getLogger().info("玩家 " + playerName + " 在游戏中发送了消息: " + msg);
 
@@ -171,7 +171,7 @@ std::vector<Player *> HuHoBot::getOnlinePlayers() {
 std::shared_ptr<endstone::Task> HuHoBot::setReconnectTask() {
     return this->getServer().getScheduler().runTaskTimer(
             *this,
-            [&]() {
+            [this]() {
                 client->task_reconnect();
                 }, 0, 5*20);
 }
@@ -179,9 +179,8 @@ std::shared_ptr<endstone::Task> HuHoBot::setReconnectTask() {
 std::shared_ptr<endstone::Task> HuHoBot::setAutoDisConnectTask() {
     return this->getServer().getScheduler().runTaskLater(
             *this,
-            [&]() {
+            [this]() {
                 getLogger().info("连接超时，已自动重连");
-                //client->shutdown(true);
                 client->reconnect();
             }, 6*60*60*20);
 }
@@ -189,7 +188,7 @@ std::shared_ptr<endstone::Task> HuHoBot::setAutoDisConnectTask() {
 std::shared_ptr<endstone::Task> HuHoBot::setHeartTask() {
     return this->getServer().getScheduler().runTaskTimer(
             *this,
-            [&]() {
+            [this]() {
                 client->sendHeart();
             }, 0, 5*20);
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <endstone/plugin/plugin.h>
 #include <string>
+#include <memory>
 #include <regex>
 #include "HuhobotClient.h"
 #include "ConfigManager.h"
@@ -8,7 +9,7 @@
 #include "endstone/scheduler/scheduler.h"
 #include "endstone/event/player/player_chat_event.h"
 
-#define HUHOBOT_VERSION "0.1.2"
+#define HUHOBOT_VERSION "0.1.3"
 
 using std::string;
 using endstone::Player;
@@ -17,7 +18,7 @@ using endstone::Player;
 class HuHoBot : public endstone::Plugin {
 private:
     static const string version;
-    BotClient* client;
+    std::unique_ptr<BotClient> client;
     static HuHoBot* instance_;
     std::string getMessageContent(const endstone::Message &msg);
 public:
