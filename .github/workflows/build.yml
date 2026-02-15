@@ -60,9 +60,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Clang 15
+      - name: Set up Clang 18
         env:
-          LLVM_VERSION: 15
+          LLVM_VERSION: 18
         run: |
           sudo apt-get update -y -q
           sudo apt-get install -y -q lsb-release wget software-properties-common gnupg
