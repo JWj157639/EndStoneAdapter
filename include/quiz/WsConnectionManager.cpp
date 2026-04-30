@@ -6,10 +6,12 @@
 #include <sstream>
 #include <iomanip>
 
-WsConnectionManager::WsConnectionManager(endstone::Logger* logger, endstone::Scheduler* scheduler)
+WsConnectionManager::WsConnectionManager(endstone::Logger* logger, endstone::Plugin* plugin,
+                                         const std::string& url)
     : WebSocketEndpoint(),
       logger(logger),
-      scheduler(scheduler),
+      plugin(plugin),
+      serverUrl(url),
       reconnectCount(0),
       maxReconnectTimes(ConfigManager::Get().GetMaxReconnectTimes()),
       currentStatus(ConnectionStatus::CLOSED),
@@ -33,11 +35,13 @@ WsConnectionManager::~WsConnectionManager() {
 }
 
 void WsConnectionManager::initConnect() {
-    bool expected = false;
-    if (!isConnecting.compare_exchange_strong(expected, true)) {
+    std::lock_guard<std::mutex> lock(stateMutex);
+    if (isConnecting) {
         logger->info("已有连接正在进行，跳过本次连接请求");
         return;
     }
+    isConnecting = true;
+    lock.~lock_guard();
 
     try {
         std::regex pattern(R"(ws:\/\/([^:\/]+):?(\d+)?(\/[\S]*)?)");
@@ -105,7 +109,7 @@ void WsConnectionManager::autoReconnect() {
 
     reconnectCount++;
 
-    reconnectTask = scheduler->runDelayed([this]() {
+    reconnectTask = plugin->getServer().getScheduler().runDelayed([this]() {
         initConnect();
     }, std::chrono::milliseconds(delay));
 }
@@ -134,12 +138,19 @@ void WsConnectionManager::SendText(const std::string& text) {
 }
 
 void WsConnectionManager::handleStatusChange(ConnectionStatus status, const std::string& errorMsg) {
-    currentStatus = status;
+    {
+        std::lock_guard<std::mutex> lock(stateMutex);
+        currentStatus = status;
+        stateCV.notify_all();
+    }
 
     switch (status) {
         case ConnectionStatus::SUBSCRIBED:
             reconnectCount = 0;
-            isConnecting = false;
+            {
+                std::lock_guard<std::mutex> lock(stateMutex);
+                isConnecting = false;
+            }
             syncLoseMessage();
             startTimeoutCheck();
             if (statusChangeCallback) {
@@ -149,7 +160,10 @@ void WsConnectionManager::handleStatusChange(ConnectionStatus status, const std:
 
         case ConnectionStatus::CHANNEL_ERROR:
         case ConnectionStatus::TIMED_OUT:
-            isConnecting = false;
+            {
+                std::lock_guard<std::mutex> lock(stateMutex);
+                isConnecting = false;
+            }
             stopTimeoutCheck();
             autoReconnect();
             if (statusChangeCallback) {
@@ -158,7 +172,10 @@ void WsConnectionManager::handleStatusChange(ConnectionStatus status, const std:
             break;
 
         case ConnectionStatus::CLOSED:
-            isConnecting = false;
+            {
+                std::lock_guard<std::mutex> lock(stateMutex);
+                isConnecting = false;
+            }
             stopTimeoutCheck();
             if (reconnectTask) {
                 reconnectTask->cancel();
@@ -239,7 +256,7 @@ int32_t WsConnectionManager::user_defined_process(WebSocketPacket& packet, ByteB
 void WsConnectionManager::startTimeoutCheck() {
     stopTimeoutCheck();
 
-    timeoutCheckTask = scheduler->runTask([this]() {
+    timeoutCheckTask = plugin->getServer().getScheduler().runTask([this]() {
         if (currentStatus == ConnectionStatus::SUBSCRIBED) {
             auto now = std::chrono::system_clock::now();
             auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(

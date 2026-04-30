@@ -3,10 +3,13 @@
 #include "websocketfiles/src/ws_endpoint.h"
 #include "websocketfiles/src/ws_packet.h"
 #include "endstone/logger.h"
+#include "endstone/plugin.h"
 #include "endstone/scheduler/scheduler.h"
 #include "endstone/scheduler/task.h"
-#include <atomic>
+#include "endstone/server.h"
+#include "config.h"
 #include <chrono>
+#include <condition_variable>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -59,9 +62,11 @@ public:
     /**
      * 构造函数
      * @param logger EndStone 日志记录器，用于记录连接状态和错误信息
-     * @param scheduler EndStone 任务调度器，用于执行延迟任务和定时任务
+     * @param plugin EndStone 插件实例，用于获取调度器和调度任务
+     * @param url WebSocket 服务器地址，默认使用编译时宏 HUHOBOT_SERVER_URL
      */
-    WsConnectionManager(endstone::Logger* logger, endstone::Scheduler* scheduler);
+    WsConnectionManager(endstone::Logger* logger, endstone::Plugin* plugin, 
+                     const std::string& url = HUHOBOT_SERVER_URL);
     
     /**
      * 析构函数
