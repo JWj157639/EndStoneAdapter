@@ -1,0 +1,2 @@
+使用js-file-downloader库获取用户输入的.zip后缀的直链，注意xxc攻击，token校验。关联路径 "D:\napcat-bot\Overload-bot\src\services\plugin-service.ts"
+用户点击"上传并重载"按钮，弹出窗口："检测到是通过网址下载，我并不能保证网址$安全(属性红色/默认字号x2)$\n请仔细鉴别！！！"，使用模态表单用户只能同意或者拒绝，点击超过范围发出：叮咚一声。用户同意可以向用户展示上传重载进度条，重载可以跨文件调用函数：reloadPlugin(pluginId: string): Promise<{ success: boolean; message: string }>

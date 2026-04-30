@@ -25,11 +25,21 @@ FetchContent_MakeAvailable(endstone)
 file(GLOB_RECURSE SOURCES
         "src/*.cpp"
         "src/**/*.cpp"
+        "include/quiz/WsConnectionManager.cpp"
 )
+
+file(GLOB_RECURSE WEBSOCKETFILES_SOURCES
+        "include/quiz/websocketfiles/src/*.cpp"
+)
+
+list(FILTER WEBSOCKETFILES_SOURCES EXCLUDE REGEX ".*main\\.cpp$")
+
+list(APPEND SOURCES ${WEBSOCKETFILES_SOURCES})
 endstone_add_plugin(${PROJECT_NAME} ${SOURCES})
 target_include_directories(${PROJECT_NAME}
         PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/quiz/websocketfiles/include>
         $<INSTALL_INTERFACE:include>
 )

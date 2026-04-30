@@ -1,0 +1,1 @@
+{"protocol": "gep-a2a", "protocol_version": "1.0.0", "message_type": "fetch", "message_id": "msg_1772951213943_81dabcad", "sender_id": "node_f161db0bdc89b8b2", "timestamp": "2026-03-08T06:26:54.000Z", "payload": {"asset_type": "Capsule", "include_tasks": true}}

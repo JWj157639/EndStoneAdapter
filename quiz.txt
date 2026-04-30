@@ -1,0 +1,143 @@
+一、强制遵守命名规范
+头文件：大驼峰 WsConnectionManager.h
+源文件：同头文件名 WsConnectionManager.cpp
+类名：和文件名完全一致 WsConnectionManager
+函数名：小驼峰 initConnect、handleStatusChange、autoReconnect
+常量：大写下划线 MAX_RECONNECT_TIMES、RECONNECT_FAST_DELAY
+二、第一步：定义连接状态枚举（对标参考文章 4 种状态）
+在头文件内定义枚举，复刻原文状态逻辑：
+SUBSCRIBED：连接正常 / 订阅成功
+CHANNEL_ERROR：通道错误
+TIMED_OUT：网络超时断连
+CLOSED：连接主动关闭
+三、第二步：类成员变量设计
+1. 常量（大写下划线）
+定义全局固定配置：最大重连次数、快速重连延时、慢速重连延时。
+2. 原子核心变量（关键防重复重连）
+声明 std::atomic<bool> 原子标记：
+std::atomic<bool> isConnecting
+作用：原子标记是否正在发起连接 / 重连，多线程、多断线回调同时触发时，靠原子操作互斥，禁止同时发起多个重连。
+3. 普通成员变量
+重连计数器：记录当前重连次数
+最后消息标识：用于重连后补全断线丢失数据
+WS 句柄 / 通道句柄：保存连接实例
+四、第三步：规划所有函数（全部小驼峰）
+公有函数
+initConnect()：初始化 WS / 通道，唯一对外发起连接入口
+closeConnect()：主动关闭连接
+私有函数
+handleStatusChange()：状态统一分发入口
+所有 WS 状态回调、断线回调、错误回调，全部收敛到这一个函数处理，不散落业务代码。
+autoReconnect()：统一重连逻辑函数
+所有断连场景只能调用这一个函数，禁止在各处直接写重连逻辑。
+syncLoseMessage()：重连成功后，同步断线期间丢失的数据
+showConnectTip()、showErrorTip()：提示类封装
+五、第四步：原子状态机核心写法逻辑（重点）
+任何场景要发起连接 / 重连，先判断原子变量 isConnecting
+采用 原子 CAS 比较交换：
+如果当前 isConnecting 已经为 true → 直接拦截，退出，不执行任何重连
+如果为 false → 原子修改为 true，抢占连接权限，开始执行连接逻辑
+三种场景必须原子重置 isConnecting 为 false：
+连接成功进入正常状态
+连接失败 / 报错
+主动关闭连接
+作用：从内存原子层面锁死，杜绝多线程并发重复发 WS 重连请求。
+六、第五步：状态流转规则（完全照搬参考文章逻辑）
+状态变为 SUBSCRIBED（正常）
+清空重连计数器
+原子释放连接锁
+执行断线数据补全
+状态为 CHANNEL_ERROR / TIMED_OUT / CLOSED（异常断连）
+原子释放连接锁
+触发统一重连函数 autoReconnect()
+重连次数达到常量上限
+停止自动重连，抛出永久连接失败提示
+七、第六步：重连策略写法
+在 autoReconnect() 内部做次数判断
+采用梯度延时：前几次短延时，后续加长延时
+延时后再调用唯一连接入口 initConnect()
+全程不允许在定时器、回调、网络事件里直接写连接代码，全部走统一入口
+八、第七步：核心约束（避免你充电器 WS 重复请求）
+所有状态变化只进 handleStatusChange 这一个入口
+所有重连只走 autoReconnect 这一个入口
+连接中状态靠 std::atomic<bool> 原子锁管控，不靠普通变量判断
+任何回调、多线程、网络波动，都无权直接发起 WS 连接，必须过原子校验
+
+
+# Supabase Realtime 状态管理（原文实战整理）
+
+## 一、核心状态定义（原文默认4种状态）
+直接使用 Supabase 订阅回调返回的 `status`，无需额外定义状态枚举，4种状态覆盖全连接生命周期：
+- `SUBSCRIBED`：订阅成功，连接正常，可正常接收消息
+- `CHANNEL_ERROR`：连接出错（如网络异常、服务端错误）
+- `TIMED_OUT`：连接超时（无响应，判定为断连）
+- `CLOSED`：连接主动关闭（用户操作或服务端主动断开）
+
+## 二、状态监听与统一处理（唯一入口）
+所有状态变化均在 `subscribe` 回调中统一处理，避免状态逻辑分散，原文实战代码：
+```typescript
+channel.subscribe((status, err) => {
+  // 1. 记录状态变更（便于排查问题，含时间戳）
+  logConnectionStatus(status, err)
+
+  // 2. 异常状态（出错/超时）→ 提示用户 + 准备重连
+  if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+    showReconnectingToast() // 给用户展示"正在重连"提示
+  }
+
+  // 3. 恢复正常状态（重新订阅成功）→ 隐藏提示 + 补齐丢失消息
+  if (status === 'SUBSCRIBED') {
+    hideReconnectingToast()
+    syncMissedMessages() // 关键：重连后自动同步断线期间的消息
+  }
+})
+```
+
+## 三、断线重连管理（防重复、有限流）
+原文采用「重连次数限流 + 梯度延迟」策略，杜绝重复重连，实战代码：
+```typescript
+let reconnectAttempts = 0 // 重连次数计数器
+const MAX_RECONNECT = 10 // 最大重连次数，避免无限重连
+
+// 统一重连处理函数（所有断连场景均调用此函数）
+function handleDisconnect() {
+  // 重连次数超限 → 提示致命错误
+  if (reconnectAttempts >= MAX_RECONNECT) {
+    showFatalError('无法恢复连接，请刷新页面')
+    return
+  }
+
+  // 梯度延迟：前3次快速重连（1秒），后续放慢（3秒），避免冲击服务端
+  const delay< 3 ? 1000 : 3000
+
+  setTimeout(() => {
+    reconnectAttempts++
+    channel.subscribe() // 唯一重连触发点，避免多地方调用导致重复重连
+  }, delay)
+}
+```
+
+## 四、重连后数据补全（避免消息丢失）
+通过记录「最后一条收到的消息ID」，重连成功后主动拉取断线期间的遗漏消息，原文实战代码：
+```typescript
+let lastMessageId = null // 记录最后一条成功接收的消息ID
+
+// 重连成功后，同步断线期间丢失的消息
+function syncMissedMessages() {
+  supabase
+    .from('messages') // 对应监听的数据库表
+    .select('*')
+    .gt('id', lastMessageId) // 只拉取比最后一条消息ID大的新消息
+    .order('created_at', { ascending: true }) // 按时间升序排列，保证顺序正确
+    .then(({ data }) => {
+      appendMessages(data) // 将遗漏的消息追加到前端展示
+      lastMessageId = data[data.length - 1]?.id // 更新最后一条消息ID
+    })
+}
+```
+
+## 五、核心设计亮点（原文实战精髓）
+1.  状态统一入口：所有连接状态变化，均在 `subscribe` 回调中处理，逻辑集中，便于维护
+2.  防重复重连：重连逻辑唯一入口（`handleDisconnect`），通过计数器限流，避免多场景触发重复重连
+3.  状态驱动行为：不同状态对应明确操作（异常→提示重连，正常→补全消息），流程清晰
+4.  断线不丢数据：重连后主动同步遗漏消息，提升用户体验，无需手动刷新

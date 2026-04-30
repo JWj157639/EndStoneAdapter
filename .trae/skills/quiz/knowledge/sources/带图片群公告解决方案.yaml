@@ -1,0 +1,256 @@
+openapi: 3.0.1
+info:
+  title: 发送群公告 API
+  description: 用于向指定群聊发送公告，支持普通文本和附带图片，并可配置置顶等属性。
+  version: 1.0.0
+paths:
+  /_send_group_notice:
+    post:
+      summary: 发送群公告
+      description: 向指定群聊发送公告消息，可包含文本内容和图片，并支持置顶等高级配置。
+      tags:
+        - 群聊管理
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - group_id
+                - content
+              properties:
+                group_id:
+                  description: 群号ID
+                  oneOf:
+                    - type: number
+                      description: 数字形式的群ID
+                    - type: string
+                      description: 字符串形式的群ID
+                  example: 123456789
+                content:
+                  type: string
+                  description: 公告的文本内容
+                  example: "这是一条测试群公告"
+                image:
+                  type: string
+                  description: |
+                    图片资源地址。支持以下格式：
+                    1. **本地文件路径**（推荐）：通过 `get_image` API 获取的本地路径，例如 `/root/.config/QQ/nt_qq_xxx/nt_data/Pic/2026-03/Ori/image.jpg`
+                    2. **公网可访问的图片URL**：仅支持标准图片URL（如 https://example.com/image.png）
+                    3. **base64 格式**：格式为 `base64://<mime_type>,<base64_data>`，例如 `base64://image/jpeg,/9j/4AAQSkZJRg...`
+                    
+                    ⚠️ **注意事项**：
+                    - 不支持腾讯云临时URL（缺少文件后缀会导致 "pic format is incorrect" 错误）
+                    - 如果使用QQ消息中的图片，建议先调用 `get_image` API 获取本地路径
+                  example: "/root/.config/QQ/nt_qq_xxx/nt_data/Pic/2026-03/Ori/image.jpg"
+                pinned:
+                  description: 是否置顶公告
+                  oneOf:
+                    - type: number
+                    - type: string
+                  example: 0
+                type:
+                  description: 公告类型
+                  oneOf:
+                    - type: number
+                    - type: string
+                  example: 0
+                confirm_required:
+                  description: 是否需要成员确认
+                  oneOf:
+                    - type: number
+                    - type: string
+                  example: 0
+                is_show_edit_card:
+                  description: 是否显示编辑卡片
+                  oneOf:
+                    - type: number
+                    - type: string
+                  example: 0
+                tip_window_type:
+                  description: 提示窗口类型
+                  oneOf:
+                    - type: number
+                    - type: string
+                  example: 0
+              responses:
+        200:
+          description: 成功发送公告
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - retcode
+                  - data
+                  - message
+                  - stream
+                properties:
+                  status:
+                    type: string
+                    description: 操作状态
+                    enum: [ok]
+                    example: ok
+                  retcode:
+                    type: number
+                    description: 返回码
+                    example: 0
+                  data:
+                    type: object
+                    description: 返回数据
+                    nullable: true
+                    example: {}
+                  message:
+                    type: string
+                    description: 提示信息
+                    example: "success"
+                  echo:
+                    type: string
+                    description: |
+                      回显参数，仅在通过WebSocket调用API时返回。
+                    nullable: true
+                    example: null
+                  wording:
+                    type: string
+                    description: go-cqhttp 错误信息
+                    nullable: true
+                  stream:
+                    type: string
+                    description: 流式返回标记
+                    enum:
+                      - stream-action
+                      - normal-action
+                    example: normal-action
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+# ==================== 实际使用示例 ====================
+
+## 示例 1: 发送纯文本群公告
+```json
+{
+  "group_id": "749590057",
+  "content": "本周六晚上8点召开全员会议，请准时参加",
+  "pinned": 1,
+  "type": 1,
+  "confirm_required": 0,
+  "is_show_edit_card": 1,
+  "tip_window_type": 0
+}
+```
+
+## 示例 2: 发送带图片的群公告（使用本地路径）
+```json
+{
+  "group_id": "749590057",
+  "content": "重要通知：服务器维护时间",
+  "image": "/root/.config/QQ/nt_qq_xxx/nt_data/Pic/2026-03/Ori/notice.jpg",
+  "pinned": 1,
+  "type": 1,
+  "confirm_required": 0,
+  "is_show_edit_card": 1,
+  "tip_window_type": 0
+}
+```
+
+## 示例 3: 从QQ消息图片发送群公告（推荐流程）
+
+### 步骤 1: 使用 `get_image` 获取本地路径
+```json
+POST /get_image
+{
+  "file": "42D7497E4D8AEEF147195197B797F095.jpg"
+}
+```
+
+### 步骤 2: 获取返回结果
+```json
+{
+  "status": "ok",
+  "retcode": 0,
+  "data": {
+    "file": "/root/.config/QQ/nt_qq_xxx/nt_data/Pic/2026-03/Ori/42d7497e4d8aeef147195197b797f095.jpg",
+    "url": "https://multimedia.nt.qq.com.cn/download?appid=1407&fileid=...",
+    "file_size": "130384",
+    "file_name": "42D7497E4D8AEEF147195197B797F095.jpg"
+  }
+}
+```
+
+### 步骤 3: 使用返回的 `file` 字段发送群公告
+```json
+POST /_send_group_notice
+{
+  "group_id": "749590057",
+  "content": "这是一条带图片的公告",
+  "image": "/root/.config/QQ/nt_qq_xxx/nt_data/Pic/2026-03/Ori/42d7497e4d8aeef147195197b797f095.jpg",
+  "pinned": 1,
+  "type": 1,
+  "confirm_required": 0,
+  "is_show_edit_card": 1,
+  "tip_window_type": 0
+}
+```
+
+## 错误处理
+
+### 常见错误 1: 权限不足
+```json
+{
+  "status": "failed",
+  "retcode": 1401,
+  "data": null,
+  "message": "权限不足",
+  "wording": "权限不足"
+}
+```
+**解决方案**: 确保机器人账号在群中具有管理员或群主权限。
+
+### 常见错误 2: 图片格式错误
+```json
+{
+  "status": "failed",
+  "retcode": 1400,
+  "data": null,
+  "message": "群公告https://multimedia.nt.qq.com.cn/...设置失败,图片上传失败，错误信息:pic format is incorrect"
+}
+```
+**原因**: 使用了腾讯云临时URL（缺少文件后缀）。
+**解决方案**: 
+1. 使用 `get_image` API 获取本地路径
+2. 使用标准图片URL（包含文件后缀）
+3. 使用 base64 格式
+
+### 特殊情况: API 返回 "No data returned"
+```json
+{
+  "status": "ok",
+  "retcode": 0,
+  "data": null,
+  "message": "",
+  "wording": "No data returned"
+}
+```
+**说明**: 这是 NapCat 的正常行为，虽然返回 "No data returned"，但群公告实际已成功发送。
+**处理方式**: 视为成功操作，不需要重试。
+
+## 参数说明
+
+| 参数 | 类型 | 必填 | 说明 | 默认值 |
+|------|------|------|------|--------|
+| group_id | string/number | 是 | 群号ID | - |
+| content | string | 是 | 公告文本内容 | - |
+| image | string | 否 | 图片路径/URL/base64 | - |
+| pinned | number/string | 是 | 是否置顶（0/1） | 1 |
+| type | number/string | 是 | 公告类型（通常为1） | 1 |
+| confirm_required | number/string | 是 | 是否需要成员确认（0/1） | 0 |
+| is_show_edit_card | number/string | 是 | 是否显示编辑卡片（0/1） | 1 |
+| tip_window_type | number/string | 是 | 提示窗口类型（通常为0） | 0 |

@@ -1,0 +1,1 @@
+{"protocol": "gep-a2a", "protocol_version": "1.0.0", "message_type": "hello", "message_id": "msg_1772951144899_d6f92301", "sender_id": "node_f161db0bdc89b8b2", "timestamp": "2026-03-08T06:25:44.899Z", "payload": {"capabilities": {"typescript": true, "napcat": true}, "gene_count": 0, "capsule_count": 0, "env_fingerprint": {"platform": "win32", "arch": "x64"}}}

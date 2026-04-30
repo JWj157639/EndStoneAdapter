@@ -108,6 +108,10 @@ void ConfigManager::InitDefaults() {
     if(!data_.contains("callbackConvertImg")){
         data_["callbackConvertImg"] = 0;
     }
+
+    if (!data_.contains("maxReconnectTimes")) {
+        data_["maxReconnectTimes"] = 10;
+    }
 }
 
 // Getter实现
@@ -153,6 +157,10 @@ std::vector<CustomCommand> ConfigManager::GetCustomCommands() const {
 
 int ConfigManager::GetCallbackConvertImg() const {
     return data_["callbackConvertImg"];
+}
+
+int ConfigManager::GetMaxReconnectTimes() const {
+    return data_.value("maxReconnectTimes", 10);
 }
 
 // Setter实现

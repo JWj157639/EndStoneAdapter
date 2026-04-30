@@ -1,0 +1,45 @@
+
+   - ctx.configPath =
+     /root/Napcat/opt/QQ/resources/app/app_launcher/napcat/config/plugins/napcat-plugin-qtbot/config.json （正确）
+   - 插件安装目录 = /root/Napcat/opt/QQ/resources/app/app_launcher/napcat/plugins/napcat-plugin-qtbot （正确）
+
+  则：
+   - 源文件 =
+     /root/Napcat/opt/QQ/resources/app/app_launcher/napcat/plugins/napcat-plugin-qtbot/config/api.config.json（正确）
+   - 目标文件 =
+     /root/Napcat/opt/QQ/resources/app/app_launcher/napcat/config/plugins/napcat-plugin-qtbot/api.config.json（正确）
+
+[INFO] [Plugin: napcat-plugin-qtbot] QTBOT 插件开始清理...
+[INFO] [Plugin: napcat-plugin-qtbot] [cleanup] 已清理所有指令
+[INFO] [Plugin: napcat-plugin-qtbot] [CronService] 停止所有定时任务...
+[INFO] [Plugin: napcat-plugin-qtbot] [CronService] 已停止任务: 整点报时
+[INFO] [Plugin: napcat-plugin-qtbot] [CronService] 已停止任务: 全群打卡
+[INFO] [Plugin: napcat-plugin-qtbot] [CronService] 所有定时任务已停止
+[INFO] [Plugin: napcat-plugin-qtbot] [cleanup] 已停止所有定时任务
+[INFO] [Plugin: napcat-plugin-qtbot] [cleanup] 已清理事件管理器
+[INFO] [Plugin: napcat-plugin-qtbot] [cleanup] 已清理事件处理器
+[INFO] [Plugin: napcat-plugin-qtbot] [cleanup] 已清理全局状态
+[INFO] [Plugin: napcat-plugin-qtbot] QTBOT 插件已卸载
+[INFO] [PluginManager] Cleaned up plugin: napcat-plugin-qtbot
+[INFO] [PluginManager] Unloaded plugin: napcat-plugin-qtbot
+[INFO] [Plugin: napcat-plugin-qtbot] [plugin_init] 开始执行插件初始化...
+[INFO] [Plugin: napcat-plugin-qtbot] [plugin_init] 准备调用 initAPIConfig...
+[INFO] [Plugin: napcat-plugin-qtbot] [initAPIConfig] 开始初始化 API 配置文件...
+[INFO] [Plugin: napcat-plugin-qtbot] [initAPIConfig] ctx.configPath: /root/Napcat/opt/QQ/resources/app/app_launcher/napcat/config/plugins/napcat-plugin-qtbot/config.json
+[INFO] [Plugin: napcat-plugin-qtbot] [initAPIConfig] 目标路径: /root/Napcat/opt/QQ/resources/app/app_launcher/napcat/config/plugins/napcat-plugin-qtbot/api.config.json （正确）
+[INFO] [Plugin: napcat-plugin-qtbot] [initAPIConfig] pluginInfo 不存在，降级方案，插件目录: /root/Napcat/opt/QQ/resources/app/app_launcher/napcat/config/napcat-plugin-qtbot
+[INFO] [Plugin: napcat-plugin-qtbot] [initAPIConfig] 源路径: /root/Napcat/opt/QQ/resources/app/app_launcher/napcat/config/napcat-plugin-qtbot/config/api.config.json （错误没有正确的是/root/Napcat/opt/QQ/resources/app/app_launcher/napcat/plugins/napcat-plugin-qtbot/config/api.config.json）
+[INFO] [Plugin: napcat-plugin-qtbot] [initAPIConfig] 源文件存在: false
+[INFO] [Plugin: napcat-plugin-qtbot] [initAPIConfig] 目标文件存在: false
+[ERROR] [Plugin: napcat-plugin-qtbot] [initAPIConfig] ✗ 源文件不存在: /root/Napcat/opt/QQ/resources/app/app_launcher/napcat/config/napcat-plugin-qtbot/config/api.config.json
+[INFO] [Plugin: napcat-plugin-qtbot] [init] API 配置文件初始化完成
+[INFO] [Plugin: napcat-plugin-qtbot] QTBOT 插件初始化中...
+[INFO] [Plugin: napcat-plugin-qtbot] [init] 错误处理器初始化完成
+[INFO] [Plugin: napcat-plugin-qtbot] [init] 事件管理器初始化完成
+[INFO] [Plugin: napcat-plugin-qtbot] [CronService] 初始化定时任务...
+[INFO] [Plugin: napcat-plugin-qtbot] [CronService] 已注册整点报时任务
+[INFO] [Plugin: napcat-plugin-qtbot] [CronService] 已注册全群打卡任务
+[INFO] [Plugin: napcat-plugin-qtbot] [CronService] 已注册 2 个定时任务
+[INFO] [Plugin: napcat-plugin-qtbot] [init] 定时任务服务初始化完成
+[INFO] [Plugin: napcat-plugin-qtbot] [init] 事件处理器初始化完成
+[INFO] [Plugin: napcat-plugin-qtbot] QTBOT 插件初始化完成

@@ -1,0 +1,73 @@
+{
+  "name": "Quiz",
+  "slug": "quiz",
+  "created_at": "2026-04-09T14:20:00Z",
+  "updated_at": "2026-04-09T16:30:00Z",
+  "version": "v2",
+  "profile": {
+    "company": "独立开发",
+    "level": "",
+    "role": "全栈开发者",
+    "gender": "",
+    "mbti": ""
+  },
+  "tags": {
+    "personality": ["安全优先", "追求效率", "知识广博但不精深", "实用主义", "事件驱动思维", "模块化思维"],
+    "culture": ["独立开发者", "开源思维", "文档详尽", "架构清晰"]
+  },
+  "impression": "追求安全的同时尽量追求效率，什么都会一点但学的不精，注重文档和问题解决；具有事件驱动架构思维，善于模块化分层设计",
+  "knowledge_sources": [
+    "knowledge/sources/README.md - QTBOT插件总体介绍",
+    "knowledge/sources/解决方案.md - 网络线程阻塞问题解决方案",
+    "knowledge/sources/ISSUES.md - ZIP文件上传问题解决记录",
+    "knowledge/sources/url上传需求.txt - URL上传功能需求",
+    "knowledge/sources/错误.txt - API配置路径问题日志",
+    "knowledge/sources/mqtt鉴权.txt - MQTT备份架构设计",
+    "knowledge/sources/携带图片数据响应.txt - 群公告图片消息示例",
+    "knowledge/sources/带图片群公告解决方案.yaml - 群公告API文档",
+    "knowledge/sources/main.php - MCBBS签到工具",
+    "knowledge/sources/logger.h - C++日志系统头文件",
+    "knowledge/sources/logger.cpp - C++日志系统实现",
+    "knowledge/docs/00-项目架构.md - 项目架构文档",
+    "knowledge/docs/01-API文档.md - API文档",
+    "knowledge/docs/02-函数作用.md - 函数作用说明",
+    "knowledge/docs/03-目录树.md - 目录树结构",
+    "knowledge/docs/04-签到系统说明.md - 签到系统说明",
+    "knowledge/docs/05-音乐系统说明.md - 音乐系统说明",
+    "knowledge/docs/06-更新日志.md - 更新日志",
+    "knowledge/docs/08-群老婆设置说明.md - 群老婆系统说明",
+    "knowledge/docs/09-账号设置说明.md - 账号设置说明",
+    "knowledge/docs/10-Puppeteer集成说明.md - Puppeteer集成说明",
+    "knowledge/docs/11-群公告系统说明.md - 群公告系统说明",
+    "knowledge/docs/插件配置与webui.md - 插件配置与WebUI",
+    "knowledge/docs/发送群回复.md - 发送群回复说明",
+    "knowledge/docs/获取好友列表.md - 获取好友列表API",
+    "knowledge/docs/获取消息.md - 获取消息API",
+    "knowledge/docs/群列表.md - 群列表API",
+    "knowledge/docs/bilibili-handler.md - B站处理器",
+    "knowledge/docs/EvoMap优化说明.md - EvoMap优化说明",
+    "knowledge/rsdocs/README.md - 程序智能重启工具概述",
+    "knowledge/rsdocs/ARCHITECTURE.md - 事件驱动架构详解",
+    "knowledge/rsdocs/mqtt-security-guide.md - MQTT安全配置指南",
+    "knowledge/rsdocs/mqtt-auth-system.md - MQTT鉴权系统文档",
+    "knowledge/rsdocs/mqtt-business-logic.md - MQTT业务逻辑",
+    "knowledge/rsdocs/api.md - API参考文档",
+    "knowledge/rsdocs/BUILD.md - 编译指南",
+    "knowledge/rsdocs/USAGE.md - 使用说明",
+    "knowledge/rsdocs/COMMANDS.md - 命令参考",
+    "knowledge/rsdocs/backup.md - 备份模块说明"
+  ],
+  "corrections_count": 0,
+  "learned_from": {
+    "source": "rsdocs",
+    "learned_at": "2026-04-09T16:30:00Z",
+    "focus": "思维模式和解决思路",
+    "key_takeaways": [
+      "事件驱动架构：零CPU占用等待，快速响应（<1ms），可扩展性强",
+      "模块化分层设计：清晰的模块职责，单一职责原则",
+      "安全分级思维：权限分级（none→basic→advanced→admin），危险命令自动拦截",
+      "性能优化思维：量化效果对比，分优先级修复",
+      "文档驱动思维：架构图、数据流图、时序图、API文档"
+    ]
+  }
+}
