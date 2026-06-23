@@ -111,22 +111,22 @@ bool TestReplacePlaceholder() {
     
     // 测试1: 基本占位符替换
     std::string template1 = "{playerName} 加入了服务器";
-    std::string result1 = TextUtils::ReplacePlaceholder(template1, "playerName", "Steve");
+    std::string result1 = TextUtils::ReplacePlaceholder(template1, "{playerName}", "Steve");
     ASSERT_STR_EQ(result1.c_str(), "Steve 加入了服务器");
     
     // 测试2: 多个相同占位符
     std::string template2 = "{playerName} 欢迎 {playerName}";
-    std::string result2 = TextUtils::ReplacePlaceholder(template2, "playerName", "Alex");
+    std::string result2 = TextUtils::ReplacePlaceholder(template2, "{playerName}", "Alex");
     ASSERT_STR_EQ(result2.c_str(), "Alex 欢迎 Alex");
     
     // 测试3: 无占位符
     std::string template3 = "固定消息";
-    std::string result3 = TextUtils::ReplacePlaceholder(template3, "playerName", "Steve");
+    std::string result3 = TextUtils::ReplacePlaceholder(template3, "{playerName}", "Steve");
     ASSERT_STR_EQ(result3.c_str(), "固定消息");
     
     // 测试4: 空值替换
     std::string template4 = "{playerName} 离开了";
-    std::string result4 = TextUtils::ReplacePlaceholder(template4, "playerName", "");
+    std::string result4 = TextUtils::ReplacePlaceholder(template4, "{playerName}", "");
     ASSERT_STR_EQ(result4.c_str(), " 离开了");
     
     return true;
