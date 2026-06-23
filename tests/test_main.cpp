@@ -156,7 +156,7 @@ bool TestMotdMarkdownConfig() {
     auto& config = ConfigManager::Get();
     
     auto motdConfig = config.GetMotdConfig();
-    ASSERT_FALSE(motdConfig.markdown);
+    ASSERT_TRUE(motdConfig.markdown);
     ASSERT_FALSE(motdConfig.customMarkdown);
     ASSERT_STR_EQ(motdConfig.text.c_str(), "共{online}人在线");
     

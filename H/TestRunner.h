@@ -3,6 +3,7 @@
 #include <vector>
 #include <functional>
 #include <iostream>
+#include <cstring>
 
 /**
  * 简单测试框架
@@ -30,7 +31,7 @@ public:
 #define ASSERT_FALSE(expr) if (expr) { msg = #expr " 为 true"; return false; }
 #define ASSERT_EQ(a, b) if ((a) != (b)) { msg = #a " != " #b; return false; }
 #define ASSERT_NE(a, b) if ((a) == (b)) { msg = #a " == " #b; return false; }
-#define ASSERT_STR_EQ(a, b) if ((a) != (b)) { msg = std::string(a) + " != " + std::string(b); return false; }
+#define ASSERT_STR_EQ(a, b) if (std::strcmp((a), (b)) != 0) { msg = std::string(a) + " != " + std::string(b); return false; }
 
 // 测试函数声明
 bool TestAnsiStrip();
