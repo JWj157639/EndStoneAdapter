@@ -28,12 +28,17 @@ file(GLOB_RECURSE SOURCES
         "include/quiz/WsConnectionManager.cpp"
 )
 
+# 排除废弃的旧文件
+list(FILTER SOURCES EXCLUDE REGEX ".*HuhobotClient\\.cpp$")
+
 file(GLOB_RECURSE WEBSOCKETFILES_SOURCES
         "include/quiz/websocketfiles/src/*.cpp"
 )
 
 list(FILTER WEBSOCKETFILES_SOURCES EXCLUDE REGEX ".*main\\.cpp$")
 
+# 加入重构后的新客户端实现
+list(APPEND SOURCES "src/HuhobotClientNew.cpp")
 list(APPEND SOURCES ${WEBSOCKETFILES_SOURCES})
 endstone_add_plugin(${PROJECT_NAME} ${SOURCES})
 target_include_directories(${PROJECT_NAME}
@@ -41,5 +46,36 @@ target_include_directories(${PROJECT_NAME}
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/quiz/websocketfiles/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/H>
         $<INSTALL_INTERFACE:include>
 )
+
+# 测试配置
+enable_testing()
+
+# 测试可执行文件（独立编译，不依赖 endstone 插件系统）
+add_executable(tests
+        tests/test_main.cpp
+        src/TextUtils.cpp
+        src/ConfigManager.cpp
+        src/tools.cpp
+)
+
+target_include_directories(tests
+        PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/H
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/quiz/websocketfiles/include
+)
+
+# 测试需要 nlohmann/json
+FetchContent_Declare(
+        json
+        URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+)
+FetchContent_MakeAvailable(json)
+
+target_link_libraries(tests PRIVATE nlohmann_json::nlohmann_json)
+
+# 注册测试
+add_test(NAME EndStoneAdapterTests COMMAND tests)

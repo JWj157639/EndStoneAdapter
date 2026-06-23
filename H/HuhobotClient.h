@@ -1,9 +1,5 @@
-// ==========================================
-// 丢弃 - 此文件已废弃，使用 WsConnectionManager 重构版本
-// 保留此文件仅作参考，不再参与构建
-// ==========================================
 #pragma once
-#include "WebSocketClient.h"
+#include "WsConnectionManager.h"
 #include "endstone/logger.h"
 #include "nlohmann/json.hpp"
 #include "tools.h"
@@ -11,8 +7,6 @@
 #include "endstone/scheduler/task.h"
 #include "config.h"
 
-
-using cyanray::WebSocketClient;
 using endstone::Logger;
 using json = nlohmann::json;
 
@@ -27,21 +21,19 @@ struct EnumConverter {
 
 class BotClient{
 private:
-    WebSocketClient client;
+    std::unique_ptr<WsConnectionManager> wsManager;
     std::string serverUrl = HUHOBOT_SERVER_URL;
     Logger* logger;
     std::unordered_map<std::string, std::string> bindMap;
     bool shouldReconnect;
-    bool waitingReconnect = false;
-    int reconnectCount = 0;
-    int maxReconnectCount = 5;
-    std::shared_ptr<endstone::Task> reconnectTask = nullptr;
+    bool isShaked = false;
     std::shared_ptr<endstone::Task> heartTask = nullptr;
     std::shared_ptr<endstone::Task> autoDisConnectTask = nullptr;
 
     json buildMsg(ServerSendEvent event_type,json body,string packId);
     void shakeHand();
     void shakedProcess();
+    void processMessage(const std::string& msg);
 
     //Event Handler
     void handler_sendConfig(string packId,json &body);
@@ -56,21 +48,23 @@ private:
     void handler_heart(string packId,json &body);
     void handler_bindRequest(string packId,json &body);
     void handler_shaked(string packId,json &body);
+
 public:
-    BotClient(Logger* logger);
+    BotClient(Logger* logger, endstone::Plugin* plugin);
     void connect();
-    void onTextMsg(string& msg);
-    void onError(string& errorMsg);
-    void onLost(int code);
     void sendMessage(
             ServerSendEvent event_type,
             json& body,
             string packId=tools::generate_pack_id()
     );
     void bindConfirm(string code);
-    void reconnect();
     void sendHeart();
     void sendChat(string msg);
     void shutdown(bool _shouldReconnect=true);
-    void task_reconnect();
+    void reconnect();
+
+    /**
+     * 推送玩家进出事件消息
+     */
+    void postPlayerEvent(const std::string& playerName, bool isJoin);
 };

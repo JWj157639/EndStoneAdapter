@@ -29,10 +29,12 @@ void HuHoBot::onLoad(){
 }
 
 void HuHoBot::onEnable() {
-    client = std::make_unique<BotClient>(&getLogger());
+    client = std::make_unique<BotClient>(&getLogger(), this);
 
     //注册事件
     registerEvent(&HuHoBot::onPlayerChat, *this);
+    registerEvent(&HuHoBot::onPlayerJoin, *this);
+    registerEvent(&HuHoBot::onPlayerQuit, *this);
 
     //检测是否已经生成hashKey
     ConfigManager& config = ConfigManager::Get();
@@ -67,6 +69,16 @@ void HuHoBot::onPlayerChat(endstone::PlayerChatEvent &event){
     }
 }
 
+void HuHoBot::onPlayerJoin(endstone::PlayerJoinEvent &event){
+    string playerName = event.getPlayer().getName();
+    client->postPlayerEvent(playerName, true);
+}
+
+void HuHoBot::onPlayerQuit(endstone::PlayerQuitEvent &event){
+    string playerName = event.getPlayer().getName();
+    client->postPlayerEvent(playerName, false);
+}
+
 bool HuHoBot::onCommand(endstone::CommandSender &sender, const endstone::Command &command,
                const std::vector<std::string> &args)
 {
@@ -84,7 +96,8 @@ bool HuHoBot::onCommand(endstone::CommandSender &sender, const endstone::Command
 
             else if(args.at(0) == "reconnect"){
                 sender.sendMessage("正在重新连接");
-                client->reconnect();
+                client->shutdown(true);
+                client->connect();
             }
             else if(args.at(0) == "disconnect"){
                 sender.sendMessage("已断开连接");
@@ -169,11 +182,9 @@ std::vector<Player *> HuHoBot::getOnlinePlayers() {
 }
 
 std::shared_ptr<endstone::Task> HuHoBot::setReconnectTask() {
-    return this->getServer().getScheduler().runTaskTimer(
-            *this,
-            [this]() {
-                client->task_reconnect();
-                }, 0, 5*20);
+    // WsConnectionManager 自带重连机制，此方法保留但不使用
+    getLogger().info("WsConnectionManager 已自动处理重连，无需手动干预");
+    return nullptr;
 }
 
 std::shared_ptr<endstone::Task> HuHoBot::setAutoDisConnectTask() {

@@ -19,6 +19,57 @@ struct CustomCommand {
 
 
 /**
+ * 玩家进出事件配置
+ */
+struct PostEventEntry {
+    bool enable = false;
+    std::string formatString;
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(PostEventEntry, enable, formatString)
+};
+
+struct PostEventConfig {
+    PostEventEntry onJoin;
+    PostEventEntry onLeft;
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(PostEventConfig, onJoin, onLeft)
+};
+
+/**
+ * MOTD 配置
+ */
+struct MotdConfig {
+    std::string server_ip = "play.easecation.net";
+    int server_port = 19132;
+    std::string api = "https://motdbe.blackbe.work/status_img?host={server_ip}:{server_port}";
+    std::string text = "共{online}人在线";
+    bool output_online_list = true;
+    bool post_img = true;
+    bool markdown = true;
+    bool customMarkdown = false;
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(MotdConfig, server_ip, server_port, api, text, output_online_list, post_img, markdown, customMarkdown)
+};
+
+/**
+ * 白名单配置
+ */
+struct WhiteListConfig {
+    std::string add = "whitelist add {name}";
+    std::string del = "whitelist remove {name}";
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(WhiteListConfig, add, del)
+};
+
+/**
+ * Redis 配置
+ */
+struct RedisConfig {
+    bool enabled = false;
+    std::string host = "localhost";
+    int port = 6379;
+    std::string password = "";
+    std::string channel = "HuHoBotChannel";
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(RedisConfig, enabled, host, port, password, channel)
+};
+
+/**
  * 配置管理器
  * 
  * 负责加载、保存和管理应用程序配置
@@ -105,6 +156,41 @@ public:
     int GetMaxReconnectTimes() const;
 
     /**
+     * 获取玩家加入事件配置
+     */
+    PostEventEntry GetPostEventOnJoin() const;
+
+    /**
+     * 获取玩家离开事件配置
+     */
+    PostEventEntry GetPostEventOnLeft() const;
+
+    /**
+     * 获取 MOTD 配置
+     */
+    MotdConfig GetMotdConfig() const;
+
+    /**
+     * 获取白名单配置
+     */
+    WhiteListConfig GetWhiteListConfig() const;
+
+    /**
+     * 获取 Redis 配置
+     */
+    RedisConfig GetRedisConfig() const;
+
+    /**
+     * 获取过滤正则列表
+     */
+    std::vector<std::string> GetFilterRegexList() const;
+
+    /**
+     * 获取插件名称
+     */
+    std::string GetName() const;
+
+    /**
      * 设置服务器 ID
      * @param id 服务器 ID
      */
@@ -145,5 +231,5 @@ private:
 
     json data_;            // 配置数据（JSON 格式）
     std::string path_;     // 配置文件路径
-    int version_ = 3;      // 配置版本号
+    int version_ = 5;      // 配置版本号
 };

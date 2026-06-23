@@ -16,3 +16,5 @@ cmake-build-*
 /build/
 endstone_HuHoBot_*
 .claude/
+
+.trae

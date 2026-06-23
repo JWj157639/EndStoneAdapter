@@ -1,6 +1,7 @@
 // ConfigManager.cpp
 #include "ConfigManager.h"
 #include <fstream>
+#include <regex>
 #include "tools.h" // 包含generate_pack_id()
 
 
@@ -112,6 +113,85 @@ void ConfigManager::InitDefaults() {
     if (!data_.contains("maxReconnectTimes")) {
         data_["maxReconnectTimes"] = 10;
     }
+
+    // 初始化 postEvent 配置
+    if (!data_.contains("postEvent")) {
+        data_["postEvent"] = {
+            {"onJoin", {{"enable", false}, {"formatString", "玩家 {playerName} 加入了服务器"}}},
+            {"onLeft", {{"enable", false}, {"formatString", "玩家 {playerName} 离开了服务器"}}}
+        };
+    } else {
+        if (!data_["postEvent"].contains("onJoin")) {
+            data_["postEvent"]["onJoin"] = {{"enable", false}, {"formatString", "玩家 {playerName} 加入了服务器"}};
+        }
+        if (!data_["postEvent"].contains("onLeft")) {
+            data_["postEvent"]["onLeft"] = {{"enable", false}, {"formatString", "玩家 {playerName} 离开了服务器"}};
+        }
+    }
+
+    // 初始化 motd 配置
+    if (!data_.contains("motd")) {
+        data_["motd"] = {
+            {"server_ip", "play.easecation.net"},
+            {"server_port", 19132},
+            {"api", "https://motdbe.blackbe.work/status_img?host={server_ip}:{server_port}"},
+            {"text", "共{online}人在线"},
+            {"output_online_list", true},
+            {"post_img", true},
+            {"markdown", true},
+            {"customMarkdown", false}
+        };
+    } else {
+        auto& motd = data_["motd"];
+        if (!motd.contains("server_ip")) motd["server_ip"] = "play.easecation.net";
+        if (!motd.contains("server_port")) motd["server_port"] = 19132;
+        if (!motd.contains("api")) motd["api"] = "https://motdbe.blackbe.work/status_img?host={server_ip}:{server_port}";
+        if (!motd.contains("text")) motd["text"] = "共{online}人在线";
+        if (!motd.contains("output_online_list")) motd["output_online_list"] = true;
+        if (!motd.contains("post_img")) motd["post_img"] = true;
+        if (!motd.contains("markdown")) motd["markdown"] = true;
+        if (!motd.contains("customMarkdown")) motd["customMarkdown"] = false;
+    }
+
+    // 初始化 whiteList 配置
+    if (!data_.contains("whiteList")) {
+        data_["whiteList"] = {
+            {"add", "whitelist add {name}"},
+            {"del", "whitelist remove {name}"}
+        };
+    } else {
+        auto& whiteList = data_["whiteList"];
+        if (!whiteList.contains("add")) whiteList["add"] = "whitelist add {name}";
+        if (!whiteList.contains("del")) whiteList["del"] = "whitelist remove {name}";
+    }
+
+    // 初始化 redis 配置
+    if (!data_.contains("redis")) {
+        data_["redis"] = {
+            {"enabled", false},
+            {"host", "localhost"},
+            {"port", 6379},
+            {"password", ""},
+            {"channel", "HuHoBotChannel"}
+        };
+    } else {
+        auto& redis = data_["redis"];
+        if (!redis.contains("enabled")) redis["enabled"] = false;
+        if (!redis.contains("host")) redis["host"] = "localhost";
+        if (!redis.contains("port")) redis["port"] = 6379;
+        if (!redis.contains("password")) redis["password"] = "";
+        if (!redis.contains("channel")) redis["channel"] = "HuHoBotChannel";
+    }
+
+    // 初始化 name 配置
+    if (!data_.contains("name") || data_["name"].empty()) {
+        data_["name"] = "HuHoBot";
+    }
+
+    // 初始化 filterRegexList
+    if (!data_.contains("filterRegexList")) {
+        data_["filterRegexList"] = std::vector<std::string>{"\\u001B\\[[;\\d]*[ -/]*[@-~]"};
+    }
 }
 
 // Getter实现
@@ -170,4 +250,32 @@ void ConfigManager::SetServerId(const std::string& id) {
 
 void ConfigManager::SetHashKey(const std::string& key) {
     data_["hashKey"] = key;
+}
+
+PostEventEntry ConfigManager::GetPostEventOnJoin() const {
+    return data_["postEvent"]["onJoin"].get<PostEventEntry>();
+}
+
+PostEventEntry ConfigManager::GetPostEventOnLeft() const {
+    return data_["postEvent"]["onLeft"].get<PostEventEntry>();
+}
+
+MotdConfig ConfigManager::GetMotdConfig() const {
+    return data_["motd"].get<MotdConfig>();
+}
+
+WhiteListConfig ConfigManager::GetWhiteListConfig() const {
+    return data_["whiteList"].get<WhiteListConfig>();
+}
+
+RedisConfig ConfigManager::GetRedisConfig() const {
+    return data_["redis"].get<RedisConfig>();
+}
+
+std::vector<std::string> ConfigManager::GetFilterRegexList() const {
+    return data_["filterRegexList"].get<std::vector<std::string>>();
+}
+
+std::string ConfigManager::GetName() const {
+    return data_.value("name", "HuHoBot");
 }

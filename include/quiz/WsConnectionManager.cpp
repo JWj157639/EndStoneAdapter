@@ -122,6 +122,10 @@ void WsConnectionManager::OnMessageReceived(std::function<void(std::string)> cal
     messageReceivedCallback = callback;
 }
 
+void WsConnectionManager::OnReconnect(std::function<void()> callback) {
+    reconnectCallback = callback;
+}
+
 void WsConnectionManager::SendText(const std::string& text) {
     if (currentStatus != ConnectionStatus::SUBSCRIBED) {
         throw std::runtime_error("WebSocket is not subscribed");
@@ -165,9 +169,14 @@ void WsConnectionManager::handleStatusChange(ConnectionStatus status, const std:
                 isConnecting = false;
             }
             stopTimeoutCheck();
-            autoReconnect();
             if (statusChangeCallback) {
                 statusChangeCallback(status, errorMsg);
+            }
+            // 优先使用外部回调，如果没有则使用内部默认重连
+            if (reconnectCallback) {
+                reconnectCallback();
+            } else {
+                autoReconnect();  // 默认行为
             }
             break;
 

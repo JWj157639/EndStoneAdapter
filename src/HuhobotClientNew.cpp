@@ -1,9 +1,6 @@
-// ==========================================
-// 丢弃 - 此文件已废弃，使用 WsConnectionManager 重构版本
-// 保留此文件仅作参考，不再参与构建
-// ==========================================
 #include "HuhobotClient.h"
 #include "ConfigManager.h"
+#include "TextUtils.h"
 #include "huhobot.h"
 #include "endstone/scheduler/scheduler.h"
 #include <fstream>
@@ -44,7 +41,6 @@ enum class ServerRecvEvent {
     unknown
 };
 
-// 添加枚举到字符串的转换工具
 string EnumConverter::ToString(ServerSendEvent e) {
     static const std::unordered_map<ServerSendEvent, std::string> map{
         {ServerSendEvent::sendMsg, "sendMsg"},
@@ -86,7 +82,7 @@ ServerRecvEvent EnumConverter::FromString(const std::string& str) {
             {"shaked",     ServerRecvEvent::shaked},
             {"chat",       ServerRecvEvent::chat},
             {"add",        ServerRecvEvent::add},
-            {"delete",     ServerRecvEvent::delete_},  // 注意字符串"delete"对应delete_
+            {"delete",     ServerRecvEvent::delete_},
             {"cmd",        ServerRecvEvent::cmd},
             {"queryList",  ServerRecvEvent::queryList},
             {"queryOnline",ServerRecvEvent::queryOnline},
@@ -105,60 +101,47 @@ ServerRecvEvent EnumConverter::FromString(const std::string& str) {
 }
 
 
-BotClient::BotClient(endstone::Logger *logger) {
+BotClient::BotClient(endstone::Logger *logger, endstone::Plugin* plugin) {
     this->logger = logger;
-    //this->logger->info("Server URL: {}", serverUrl);
+    wsManager = std::make_unique<WsConnectionManager>(logger, plugin, serverUrl);
+
+    wsManager->OnMessageReceived([this](std::string msg) {
+        this->processMessage(msg);
+    });
+
+    wsManager->OnStatusChange([this](WsConnectionManager::ConnectionStatus status, std::string errorMsg) {
+        switch (status) {
+            case WsConnectionManager::ConnectionStatus::SUBSCRIBED:
+                logger->info("WebSocket连接已建立");
+                if (!isShaked) {
+                    logger->info("正在握手...");
+                    shakeHand();
+                }
+                break;
+            case WsConnectionManager::ConnectionStatus::CHANNEL_ERROR:
+            case WsConnectionManager::ConnectionStatus::TIMED_OUT:
+                logger->error("WebSocket连接异常: {}", errorMsg);
+                break;
+            case WsConnectionManager::ConnectionStatus::CLOSED:
+                logger->warning("WebSocket连接已关闭");
+                isShaked = false;
+                break;
+        }
+    });
+
+    wsManager->OnReconnect([this]() {
+        logger->info("触发重连回调，准备重新连接");
+        isShaked = false;  // 重置握手状态
+        wsManager->autoReconnect();  // 调用默认重连逻辑
+    });
 }
 
 void BotClient::connect(){
     logger->info("正在连接服务器...");
-    // 先注册回调，再连接，避免连接后消息到达时回调还未设置
-    client.OnTextReceived([this](cyanray::WebSocketClient& ws, std::string msg) {
-        this->onTextMsg(msg);
-    });
-    client.OnError([this](cyanray::WebSocketClient& ws, std::string msg) {
-        this->onError(msg);
-    });
-    client.OnLostConnection([this](cyanray::WebSocketClient& ws, int code) {
-        this->onLost(code);
-    });
-    client.Connect(serverUrl);
-    logger->info("连接服务器成功.");
-    logger->info("正在握手...");
-    shakeHand();
+    wsManager->initConnect();
 }
 
-void BotClient::reconnect() {
-    logger->info("正在重连服务器...");
-    try {
-        if(client.GetStatus() == WebSocketClient::Status::Open){
-            client.Shutdown();
-            shouldReconnect = false;
-        }
-        connect();
-    } catch (const std::exception& e) {
-        logger->error("重连失败: {}", e.what());
-        shouldReconnect = true;
-        if(reconnectTask == nullptr){
-            reconnectTask = HuHoBot::getInstance().setReconnectTask();
-        }
-    }
-}
-
-void BotClient::task_reconnect(){
-    if(shouldReconnect &&  reconnectCount < maxReconnectCount){
-        reconnectCount++;
-        logger->info(" 正在尝试重新连接,这是第({}/{})次连接", reconnectCount,maxReconnectCount);
-        reconnect();
-    }
-    if(reconnectCount >= maxReconnectCount){
-        logger->error("重连尝试已达到最大次数，将不再尝试重新连接.");
-        reconnectTask->cancel();
-        reconnectTask = nullptr;
-    }
-}
-
-void BotClient::onTextMsg(string& msg){
+void BotClient::processMessage(const std::string& msg){
     try {
         json msgJson = json::parse(msg);
         json header = msgJson["header"];
@@ -217,20 +200,6 @@ void BotClient::onTextMsg(string& msg){
     }
 }
 
-void BotClient::onError(std::string &errorMsg) {
-    logger->error("WebSocket错误:{}", errorMsg);
-    // 只记录日志，不再由 onError 触发重连
-    // 真正的连接断开由 onLost 处理，避免 select error 等临时错误导致不必要的重连
-}
-
-void BotClient::onLost(int code) {
-    logger->error("WebSocket连接丢失:{}", code);
-    logger->info("正在尝试重新连接...");
-    if(reconnectTask == nullptr){
-        reconnectTask = HuHoBot::getInstance().setReconnectTask();
-    }
-}
-
 json BotClient::buildMsg(ServerSendEvent event_type,json body,string packId) {
     json header = {
             {"type", EnumConverter::ToString(event_type)},
@@ -244,8 +213,10 @@ json BotClient::buildMsg(ServerSendEvent event_type,json body,string packId) {
 
 void BotClient::sendMessage(ServerSendEvent event_type,json& body,string packId) {
     json msg = buildMsg(event_type,body,packId);
-    if(client.GetStatus() == WebSocketClient::Status::Open){
-        client.SendText(msg.dump());
+    try {
+        wsManager->SendText(msg.dump());
+    } catch (const std::exception& e) {
+        logger->error("发送消息失败: {}", e.what());
     }
 }
 
@@ -290,55 +261,59 @@ void BotClient::sendChat(string msg){
 
 void BotClient::shutdown(bool _shouldReconnect){
     shouldReconnect = _shouldReconnect;
-    client.Shutdown();
+    wsManager->closeConnect();
+}
+
+void BotClient::reconnect(){
+    logger->info("正在重新连接...");
+    wsManager->closeConnect();
+    wsManager->initConnect();
 }
 
 void BotClient::shakedProcess(){
-    //设置自动断连
     if(autoDisConnectTask != nullptr){
         autoDisConnectTask->cancel();
     }
     autoDisConnectTask = HuHoBot::getInstance().setAutoDisConnectTask();
-    //设置自动发送心跳包
+
     if(heartTask != nullptr){
         heartTask->cancel();
     }
     heartTask = HuHoBot::getInstance().setHeartTask();
-    //取消上一个自动重连任务
-    if(reconnectTask != nullptr){
-        reconnectTask->cancel();
-        reconnectTask = nullptr;
-    }
 }
 
 //////////////////////////////////// Event Handler /////////////////////////////////////
 void BotClient::handler_shaked(string packId,json &body) {
     int code = body["code"];
     string msg = body["msg"];
-    reconnectCount = 0;
     switch (code) {
         case 1:
             logger->info("与服务端握手成功.");
             shouldReconnect = true;
+            isShaked = true;
             shakedProcess();
             break;
         case 2:
             logger->info("握手完成!附加消息:{}", msg);
             shouldReconnect = true;
+            isShaked = true;
             shakedProcess();
             break;
         case 3:
             logger->error("握手失败，客户端密钥错误.");
             shouldReconnect = false;
+            isShaked = false;
             break;
         case 6:
             logger->info("与服务端握手成功，服务端等待绑定...");
             shouldReconnect = true;
+            isShaked = true;
             shakedProcess();
             break;
         default:
             logger->error("握手失败，原因{}", msg);
             shouldReconnect = false;
+            isShaked = false;
     }
 }
 
@@ -348,7 +323,8 @@ void BotClient::handler_sendConfig(string packId,json &body){
     config.SetHashKey(HashKey);
     config.Save();
 
-    reconnect();
+    wsManager->closeConnect();
+    wsManager->initConnect();
 }
 
 void BotClient::handler_chat(string packId,json &body) {
@@ -360,13 +336,11 @@ void BotClient::handler_chat(string packId,json &body) {
 
     if(!postChat) return;
 
-    // 替换{nick}
     size_t pos = format.find("{nick}");
     if (pos != std::string::npos) {
         format.replace(pos, 6, nick);
     }
 
-    // 替换{msg}
     pos = format.find("{msg}");
     if (pos != std::string::npos) {
         format.replace(pos, 5, msg);
@@ -380,6 +354,10 @@ void BotClient::handler_add(string packId,json &body) {
 
     string cmd = "allowlist add \""+XboxId+"\"";
     auto [output, isSuccess] = HuHoBot::getInstance().runCommand(cmd);
+
+    auto filterPatterns = ConfigManager::Get().GetFilterRegexList();
+    output = TextUtils::FilterTextByRegex(output, filterPatterns);
+
     if(isSuccess){
         int callbackConvertImg = ConfigManager::Get().GetCallbackConvertImg();
         json rBody = {{"msg", output,"callbackConvertImg",callbackConvertImg}};
@@ -396,6 +374,9 @@ void BotClient::handler_delete_(string packId,json &body) {
     string cmd = "allowlist remove \""+XboxId+"\"";
     auto [output, isSuccess] = HuHoBot::getInstance().runCommand(cmd);
 
+    auto filterPatterns = ConfigManager::Get().GetFilterRegexList();
+    output = TextUtils::FilterTextByRegex(output, filterPatterns);
+
     if(isSuccess){
         int callbackConvertImg = ConfigManager::Get().GetCallbackConvertImg();
         json rBody = {{"msg", output,"callbackConvertImg",callbackConvertImg}};
@@ -411,6 +392,9 @@ void BotClient::handler_cmd(string packId,json &body) {
     string cmd = body["cmd"];
     auto [output, isSuccess] = HuHoBot::getInstance().runCommand(cmd);
 
+    auto filterPatterns = ConfigManager::Get().GetFilterRegexList();
+    output = TextUtils::FilterTextByRegex(output, filterPatterns);
+
     if(isSuccess){
         int callbackConvertImg = ConfigManager::Get().GetCallbackConvertImg();
         json rBody = {{"msg", output,"callbackConvertImg",callbackConvertImg}};
@@ -425,24 +409,45 @@ void BotClient::handler_cmd(string packId,json &body) {
 void BotClient::handler_queryOnline(string packId,json &body) {
     try{
         std::vector<Player*> onlinePlayers = HuHoBot::getInstance().getOnlinePlayers();
+        auto motdConfig = ConfigManager::Get().GetMotdConfig();
 
-        // 构建玩家列表字符串
         std::ostringstream oss;
         for (Player* player : onlinePlayers) {
             oss << player->getName() << "\n";
         }
         oss << "共" << onlinePlayers.size() << "人在线";
 
-        // 构建嵌套JSON结构
         json list;
         list["msg"] = oss.str();
-        list["url"] = ConfigManager::Get().GetMotdUrl(); // 从配置获取URL
+        list["url"] = ConfigManager::Get().GetMotdUrl();
         list["serverType"] = "bedrock";
 
         json rBody;
         rBody["list"] = list;
+        rBody["currentOnline"] = static_cast<int>(onlinePlayers.size());
+        rBody["serverName"] = ConfigManager::Get().GetServerName();
 
-        // 发送消息
+        // Markdown 支持
+        rBody["useMarkdown"] = motdConfig.markdown;
+
+        if (motdConfig.customMarkdown) {
+            std::string markdownContent;
+            std::string motdText = motdConfig.text;
+            motdText = TextUtils::ReplacePlaceholder(motdText, "{online}", std::to_string(onlinePlayers.size()));
+
+            std::ifstream mdFile("plugins/HuHoBot/online.md");
+            if (mdFile.is_open()) {
+                std::stringstream buffer;
+                buffer << mdFile.rdbuf();
+                markdownContent = buffer.str();
+                markdownContent = TextUtils::ReplacePlaceholder(markdownContent, "{online}", std::to_string(onlinePlayers.size()));
+            } else {
+                markdownContent = motdText;
+            }
+
+            rBody["customMarkdown"] = markdownContent;
+        }
+
         sendMessage(ServerSendEvent::queryOnline, rBody,packId);
 
     } catch (const std::exception& e) {
@@ -452,21 +457,17 @@ void BotClient::handler_queryOnline(string packId,json &body) {
 
 void BotClient::handler_queryList(string packId,json &body) {
     try {
-        // 1. 读取白名单文件
         std::ifstream fin("allowlist.json");
         json allowlist = json::parse(fin);
 
-        // 2. 构建白名单集合
         std::set<std::string> whiteList;
         for (auto& entry : allowlist) {
             whiteList.insert(entry["name"].get<std::string>());
         }
 
-        // 3. 准备响应数据
         json rBody;
         std::ostringstream oss;
 
-        // 4. 处理不同查询条件
         if (body.contains("key")) {
             std::string key = body["key"].get<std::string>();
 
@@ -478,7 +479,6 @@ void BotClient::handler_queryList(string packId,json &body) {
                 return;
             }
 
-            // 过滤包含关键词的名单
             std::vector<std::string> filterList;
             std::copy_if(whiteList.begin(), whiteList.end(),
                          std::back_inserter(filterList),
@@ -497,11 +497,9 @@ void BotClient::handler_queryList(string packId,json &body) {
             }
 
         } else if (body.contains("page")) {
-            // 分页处理
             int page = body["page"].get<int>();
             std::vector<std::vector<std::string>> splitedNameList;
 
-            // 分块处理（每页10条）
             auto it = whiteList.begin();
             while (it != whiteList.end()) {
                 std::vector<std::string> chunk;
@@ -525,7 +523,6 @@ void BotClient::handler_queryList(string packId,json &body) {
             }
 
         } else {
-            // 默认显示第一页
             std::vector<std::vector<std::string>> splitedNameList;
             auto it = whiteList.begin();
             while (it != whiteList.end()) {
@@ -546,7 +543,6 @@ void BotClient::handler_queryList(string packId,json &body) {
                 << "页，当前为第1页\n请使用/查白名单 {页码}来翻页";
         }
 
-        // 5. 发送响应
         rBody["list"] = oss.str();
         sendMessage(ServerSendEvent::queryWl, rBody,packId);
 
@@ -561,23 +557,20 @@ void BotClient::handler_shutdown(string packId,json &body) {
     logger->error("此错误具有不可容错性!请检查插件配置文件!");
     logger->warning("正在断开连接...");
     shouldReconnect = false;
-    client.Shutdown();
+    wsManager->closeConnect();
 }
 
 void BotClient::handler_run(string packId,json &body, bool isAdmin) {
     try {
-        // 解析请求参数
         std::string key = body["key"].get<std::string>();
         std::vector<std::string> params = body["runParams"].get<std::vector<std::string>>();
 
-        // 获取命令映射表
         auto commands = ConfigManager::Get().GetCustomCommands();
         std::unordered_map<std::string, CustomCommand> commandMap;
         for (const auto& cmd : commands) {
             commandMap[cmd.key] = cmd;
         }
 
-        // 查找命令
         auto it = commandMap.find(key);
         if (it == commandMap.end()) {
             json errorBody = {{"msg", "未找到对应命令: " + key}};
@@ -587,7 +580,6 @@ void BotClient::handler_run(string packId,json &body, bool isAdmin) {
 
         const CustomCommand& result = it->second;
 
-        // 参数替换
         std::string command = result.command;
         for (size_t i = 0; i < params.size(); ++i) {
             std::string placeholder = "&" + std::to_string(i+1);
@@ -598,7 +590,6 @@ void BotClient::handler_run(string packId,json &body, bool isAdmin) {
             }
         }
 
-        // 权限检查
         if (result.permission > 0 && !isAdmin) {
             json errorBody = {{"msg", "权限不足，若您为管理员，请使用/管理员执行"}};
             sendMessage(ServerSendEvent::error, errorBody, packId);
@@ -607,7 +598,9 @@ void BotClient::handler_run(string packId,json &body, bool isAdmin) {
 
         auto [output, isSuccess] = HuHoBot::getInstance().runCommand(command);
 
-        // 执行命令
+        auto filterPatterns = ConfigManager::Get().GetFilterRegexList();
+        output = TextUtils::FilterTextByRegex(output, filterPatterns);
+
         if(isSuccess){
             int callbackConvertImg = ConfigManager::Get().GetCallbackConvertImg();
             json rBody = {{"msg", output,"callbackConvertImg",callbackConvertImg}};
@@ -635,4 +628,15 @@ void BotClient::handler_bindRequest(string packId,json &body) {
     string bindCode = body["bindCode"];
     logger->info("收到一个新的绑定请求，如确认绑定，请输入\"/huhobot bind "+bindCode+"\"来进行确认");
     bindMap[bindCode] = packId;
+}
+
+void BotClient::postPlayerEvent(const std::string& playerName, bool isJoin) {
+    auto eventConfig = isJoin ? ConfigManager::Get().GetPostEventOnJoin() : ConfigManager::Get().GetPostEventOnLeft();
+
+    if (!eventConfig.enable) {
+        return;
+    }
+
+    std::string msg = TextUtils::ReplacePlaceholder(eventConfig.formatString, "{playerName}", playerName);
+    sendChat(msg);
 }

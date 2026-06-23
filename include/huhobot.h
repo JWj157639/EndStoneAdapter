@@ -8,6 +8,8 @@
 #include "endstone/scheduler/task.h"
 #include "endstone/scheduler/scheduler.h"
 #include "endstone/event/player/player_chat_event.h"
+#include "endstone/event/player/player_join_event.h"
+#include "endstone/event/player/player_quit_event.h"
 
 #define HUHOBOT_VERSION "0.1.3"
 
@@ -30,6 +32,8 @@ public:
     void onLoad() override;
     void onEnable() override;
     void onPlayerChat(endstone::PlayerChatEvent &event);
+    void onPlayerJoin(endstone::PlayerJoinEvent &event);
+    void onPlayerQuit(endstone::PlayerQuitEvent &event);
     bool onCommand(endstone::CommandSender &sender, const endstone::Command &command,
                    const std::vector<std::string> &args) override;
     std::shared_ptr<endstone::Task> setReconnectTask();
@@ -38,4 +42,3 @@ public:
     void broadcastMsg(const string& msg);
     static HuHoBot& getInstance();
 };
-

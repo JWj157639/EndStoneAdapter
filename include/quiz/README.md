@@ -52,6 +52,13 @@ public:
         wsManager->OnMessageReceived([this](std::string msg) {
             this->onMessageReceived(msg);
         });
+
+        // 注册重连回调（可选，未注册时使用默认重连）
+        wsManager->OnReconnect([this]() {
+            logger->info("触发重连回调，准备重新连接");
+            isShaked = false;  // 重置握手状态
+            wsManager->autoReconnect();  // 调用默认重连逻辑
+        });
     }
 
     void connect(const std::string& url) {
@@ -175,6 +182,30 @@ wsManager->OnMessageReceived([](std::string msg) {
 });
 ```
 
+#### `OnReconnect(callback)`
+注册重连回调（新增）。
+
+```cpp
+void OnReconnect(std::function<void()> callback);
+```
+
+**参数**：
+- `callback`：需要重连时的回调函数
+
+**说明**：
+- 当连接状态变为 `CHANNEL_ERROR` 或 `TIMED_OUT` 时触发
+- 如果注册了回调，优先执行外部回调
+- 如果未注册回调，使用内部默认的 `autoReconnect()` 兜底
+
+**示例**：
+```cpp
+wsManager->OnReconnect([this]() {
+    logger->info("触发重连回调，准备重新连接");
+    isShaked = false;  // 重置握手状态
+    wsManager->autoReconnect();  // 调用默认重连逻辑
+});
+```
+
 #### `SendText(text)`
 发送文本消息。
 
@@ -189,6 +220,23 @@ void SendText(const std::string& text);
 - 如果连接状态不是 `SUBSCRIBED`，会抛出异常
 
 ## 重连策略
+
+### 混合重连机制
+
+```cpp
+// 优先使用外部回调，如果没有则使用内部默认重连
+if (reconnectCallback) {
+    reconnectCallback();
+} else {
+    autoReconnect();  // 默认行为
+}
+```
+
+**设计优势**：
+- **灵活性**：外部可以通过 `OnReconnect()` 注册自定义重连逻辑
+- **健壮性**：如果外部未注册回调，自动使用 `autoReconnect()` 兜底
+- **向后兼容**：现有代码无需修改，仍然可以正常工作
+- **可扩展**：未来可以根据需要扩展重连策略
 
 ### 梯度延迟
 
@@ -210,6 +258,25 @@ if (reconnectCount >= maxReconnectTimes) {
 
 - 达到最大重连次数后停止重连
 - 默认最大次数：10（可配置）
+
+### 完整重连流程
+
+```
+连接失败 (CHANNEL_ERROR/TIMED_OUT)
+    ↓
+handleStatusChange() 触发
+    ↓
+调用 reconnectCallback()
+    ↓
+BotClient 的回调执行：
+  - 记录日志
+  - 重置 isShaked = false
+  - 调用 autoReconnect()
+    ↓
+梯度延迟 (1s/3s)
+    ↓
+initConnect() 重新连接
+```
 
 ## 超时检测
 

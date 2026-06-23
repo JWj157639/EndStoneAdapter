@@ -108,6 +108,12 @@ public:
     void OnMessageReceived(std::function<void(std::string)> callback);
 
     /**
+     * 注册重连回调
+     * @param callback 需要重连时的回调函数
+     */
+    void OnReconnect(std::function<void()> callback);
+
+    /**
      * 发送文本消息
      * @param text 要发送的文本消息
      * @throws std::runtime_error 如果未连接则抛出异常
@@ -134,6 +140,7 @@ private:
 
     std::function<void(ConnectionStatus, std::string)> statusChangeCallback;    // 状态变化回调
     std::function<void(std::string)> messageReceivedCallback;                  // 消息接收回调
+    std::function<void()> reconnectCallback;                                   // 重连回调
 
     /**
      * 处理状态变化
@@ -226,5 +233,8 @@ private:
     socket_t wsSocket;            // WebSocket 套接字
     std::thread recvLoopThread;    // 接收循环线程
     std::mutex sendMutex;          // 发送互斥锁
+    std::mutex stateMutex;         // 状态互斥锁
+    std::condition_variable stateCV; // 状态条件变量
     std::string serverUrl;         // 服务器 URL
+    endstone::Plugin* plugin;      // 插件实例
 };
