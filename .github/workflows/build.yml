@@ -20,38 +20,38 @@ on:
       - 'CMakeLists.txt'
   workflow_dispatch:
 
-jobs:
-  build_windows:
-    name: Build on Windows
-    runs-on: windows-2022
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up MSVC
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x86_64
-
-      - name: Set up CMake and Ninja
-        uses: lukka/get-cmake@latest
-
-      - name: Build with CMake
-        run: |
-          mkdir build
-          cd build
-          cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DHUHOBOT_SERVER_URL="${{ secrets.WS_SERVER_URL }}" ..
-          cmake --build .
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: endstone-huhobot-${{ runner.os }}
-          path: |
-            ./build/endstone_*.dll
-            ./build/endstone_*.pdb
-
+  jobs:
+#   build_windows:
+#     name: Build on Windows
+#     runs-on: windows-2022
+# 
+#     steps:
+#       - name: Checkout Code
+#         uses: actions/checkout@v4
+# 
+#       - name: Set up MSVC
+#         uses: ilammy/msvc-dev-cmd@v1
+#         with:
+#           arch: x86_64
+# 
+#       - name: Set up CMake and Ninja
+#         uses: lukka/get-cmake@latest
+# 
+#       - name: Build with CMake
+#         run: |
+#           mkdir build
+#           cd build
+#           cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DHUHOBOT_SERVER_URL="${{ secrets.WS_SERVER_URL }}" ..
+#           cmake --build .
+# 
+#       - name: Upload Artifacts
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: endstone-huhobot-${{ runner.os }}
+#           path: |
+#             ./build/endstone_*.dll
+#             ./build/endstone_*.pdb
+# 
   build_linux:
     name: Build on Ubuntu
     runs-on: ubuntu-22.04
@@ -94,7 +94,7 @@ jobs:
     name: Create Release
     needs:
       - build_linux
-#     - build_windows
+      - build_windows
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     # 新增权限配置

@@ -55,11 +55,11 @@ public:
     void sendMessage(
             ServerSendEvent event_type,
             json& body,
-            string packId=tools::generate_pack_id()
+            std::string packId=tools::generate_pack_id()
     );
-    void bindConfirm(string code);
+    void bindConfirm(std::string code);
     void sendHeart();
-    void sendChat(string msg);
+    void sendChat(std::string msg);
     void shutdown(bool _shouldReconnect=true);
     void reconnect();
 

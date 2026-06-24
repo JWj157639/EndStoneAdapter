@@ -118,9 +118,12 @@ void WsConnectionManager::autoReconnect() {
 
     reconnectCount++;
 
-    reconnectTask = plugin->getServer().getScheduler().runDelayed([this]() {
-        initConnect();
-    }, std::chrono::milliseconds(delay));
+    reconnectTask = plugin->getServer().getScheduler().runTaskTimer(
+        *plugin,
+        [this]() { initConnect(); },
+        delay / 50,  // 毫秒转 tick (假设 50ms = 1 tick)
+        1
+    );
 }
 
 void WsConnectionManager::OnStatusChange(std::function<void(ConnectionStatus, std::string)> callback) {
@@ -274,19 +277,24 @@ int32_t WsConnectionManager::user_defined_process(WebSocketPacket& packet, ByteB
 void WsConnectionManager::startTimeoutCheck() {
     stopTimeoutCheck();
 
-    timeoutCheckTask = plugin->getServer().getScheduler().runTask([this]() {
-        if (currentStatus == ConnectionStatus::SUBSCRIBED) {
-            auto now = std::chrono::system_clock::now();
-            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
-                now - lastActivityTime
-            ).count();
+    timeoutCheckTask = plugin->getServer().getScheduler().runTaskTimer(
+        *plugin,
+        [this]() {
+            if (currentStatus == ConnectionStatus::SUBSCRIBED) {
+                auto now = std::chrono::system_clock::now();
+                auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+                    now - lastActivityTime
+                ).count();
 
-            if (elapsed >= TIMEOUT_SECONDS) {
-                logger->warning("连接超时，最后活动时间: {} 秒前", elapsed);
-                handleStatusChange(ConnectionStatus::TIMED_OUT, "连接超时");
+                if (elapsed >= TIMEOUT_SECONDS) {
+                    logger->warning("连接超时，最后活动时间: {} 秒前", elapsed);
+                    handleStatusChange(ConnectionStatus::TIMED_OUT, "连接超时");
+                }
             }
-        }
-    }, std::chrono::seconds(5));
+        },
+        5 * 20,  // 5 秒 = 100 tick
+        5 * 20   // 每 5 秒重复检查
+    );
 }
 
 void WsConnectionManager::stopTimeoutCheck() {
@@ -410,9 +418,12 @@ socket_t WsConnectionManager::hostnameConnect(const std::string& hostname, int p
 void WsConnectionManager::startHeartbeat() {
     stopHeartbeat();
     
-    heartbeatTask = plugin->getServer().getScheduler().runTaskTimer([this]() {
-        sendHeart();
-    }, 0, 10 * 20);
+    heartbeatTask = plugin->getServer().getScheduler().runTaskTimer(
+        *plugin,
+        [this]() { sendHeart(); },
+        0,       // 立即开始
+        10 * 20  // 每 10 秒 = 200 tick
+    );
     
     logger->debug("心跳任务已启动，间隔 10 秒");
 }

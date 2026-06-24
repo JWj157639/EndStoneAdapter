@@ -110,7 +110,7 @@ BotClient::BotClient(endstone::Logger *logger, endstone::Plugin* plugin) {
         this->processMessage(msg);
     });
 
-    wsManager->OnStatusChange([this](WsConnectionManager::ConnectionStatus status, std::string errorMsg) {
+    wsManager->OnStatusChange([=](WsConnectionManager::ConnectionStatus status, std::string errorMsg) {
         switch (status) {
             case WsConnectionManager::ConnectionStatus::SUBSCRIBED:
                 logger->info("WebSocket连接已建立");
@@ -130,7 +130,7 @@ BotClient::BotClient(endstone::Logger *logger, endstone::Plugin* plugin) {
         }
     });
 
-    wsManager->OnReconnect([this]() {
+    wsManager->OnReconnect([=]() {
         logger->info("触发重连回调，准备重新连接");
         isShaked = false;  // 重置握手状态
         wsManager->autoReconnect();  // 调用默认重连逻辑
