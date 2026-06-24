@@ -2,11 +2,11 @@
 
 #include "websocketfiles/src/ws_endpoint.h"
 #include "websocketfiles/src/ws_packet.h"
-#include "endstone/logger.h"
-#include "endstone/plugin.h"
-#include "endstone/scheduler/scheduler.h"
-#include "endstone/scheduler/task.h"
-#include "endstone/server.h"
+#include <endstone/logger.h>
+#include <endstone/plugin/plugin.h>
+#include <endstone/scheduler/scheduler.h>
+#include <endstone/scheduler/task.h>
+#include <endstone/server.h>
 #include "config.h"
 #include <chrono>
 #include <condition_variable>

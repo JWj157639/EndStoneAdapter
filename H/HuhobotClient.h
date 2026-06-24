@@ -1,5 +1,5 @@
 #pragma once
-#include "WsConnectionManager.h"
+#include "quiz/WsConnectionManager.h"
 #include "endstone/logger.h"
 #include "nlohmann/json.hpp"
 #include "tools.h"
