@@ -137,6 +137,7 @@ private:
     std::chrono::system_clock::time_point lastActivityTime;  // 最后活动时间
     std::shared_ptr<endstone::Task> reconnectTask;          // 重连任务
     std::shared_ptr<endstone::Task> timeoutCheckTask;       // 超时检测任务
+    std::shared_ptr<endstone::Task> heartbeatTask;          // 心跳任务
 
     std::function<void(ConnectionStatus, std::string)> statusChangeCallback;    // 状态变化回调
     std::function<void(std::string)> messageReceivedCallback;                  // 消息接收回调
@@ -175,6 +176,24 @@ private:
      */
     int32_t user_defined_process(WebSocketPacket& packet, ByteBuffer& frame_payload) override;
     
+    /**
+     * 启动心跳
+     * 在握手成功后启动定时器，每 10 秒发送一次心跳
+     */
+    void startHeartbeat();
+    
+    /**
+     * 停止心跳
+     * 取消心跳定时任务
+     */
+    void stopHeartbeat();
+    
+    /**
+     * 发送心跳
+     * 向服务端发送 {"type": "heart"} 消息
+     */
+    void sendHeart();
+
     /**
      * 启动超时检测
      * 每 30 秒检查一次是否有活动，如果没有则触发超时

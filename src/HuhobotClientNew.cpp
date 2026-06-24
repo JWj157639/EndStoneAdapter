@@ -310,8 +310,13 @@ void BotClient::handler_shaked(string packId,json &body) {
             isShaked = true;
             shakedProcess();
             break;
+        case 8:
+            logger->error("握手失败，服务器已被禁用，请5分钟后重试,或者联系开发者.");
+            shouldReconnect = false;
+            isShaked = false;
+            break;
         default:
-            logger->error("握手失败，原因{}", msg);
+            logger->error("握手失败，原因：{}", msg);
             shouldReconnect = false;
             isShaked = false;
     }
@@ -319,9 +324,16 @@ void BotClient::handler_shaked(string packId,json &body) {
 
 void BotClient::handler_sendConfig(string packId,json &body){
     ConfigManager& config = ConfigManager::Get();
-    string HashKey = body["hashKey"];
-    config.SetHashKey(HashKey);
+    
+    // 保存服务端下发的配置
+    string serverId = body["serverId"];
+    string hashKey = body["hashKey"];
+    
+    config.SetServerId(serverId);
+    config.SetHashKey(hashKey);
     config.Save();
+
+    logger->info("已保存服务端配置: serverId={}", serverId);
 
     wsManager->closeConnect();
     wsManager->initConnect();

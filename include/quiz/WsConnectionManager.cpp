@@ -18,6 +18,9 @@ WsConnectionManager::WsConnectionManager(endstone::Logger* logger, endstone::Plu
       isConnecting(false),
       wsSocket(INVALID_SOCKET) {
     lastActivityTime = std::chrono::system_clock::now();
+        //禁用cout输出
+    std::cout.setstate(std::ios_base::failbit);
+
 #if defined(_WIN32)
     WSADATA data;
     int WsResult = WSAStartup(MAKEWORD(2, 2), &data);
@@ -35,13 +38,14 @@ WsConnectionManager::~WsConnectionManager() {
 }
 
 void WsConnectionManager::initConnect() {
-    std::lock_guard<std::mutex> lock(stateMutex);
-    if (isConnecting) {
-        logger->info("已有连接正在进行，跳过本次连接请求");
-        return;
+    {
+        std::lock_guard<std::mutex> lock(stateMutex);
+        if (isConnecting) {
+            logger->info("已有连接正在进行，跳过本次连接请求");
+            return;
+        }
+        isConnecting = true;
     }
-    isConnecting = true;
-    lock.~lock_guard();
 
     try {
         std::regex pattern(R"(ws:\/\/([^:\/]+):?(\d+)?(\/[\S]*)?)");
@@ -68,6 +72,8 @@ void WsConnectionManager::initConnect() {
 
         logger->info("握手成功");
         handleStatusChange(ConnectionStatus::SUBSCRIBED);
+        startHeartbeat();
+        startTimeoutCheck();
 
         recvLoopThread = std::thread([this]() { networkRecvLoop(); });
 
@@ -80,6 +86,9 @@ void WsConnectionManager::initConnect() {
 
 void WsConnectionManager::closeConnect() {
     handleStatusChange(ConnectionStatus::CLOSED, "主动关闭连接");
+
+    stopHeartbeat();
+    stopTimeoutCheck();
 
     if (wsSocket != INVALID_SOCKET) {
         closesocket(wsSocket);
@@ -201,7 +210,7 @@ void WsConnectionManager::syncLoseMessage() {
     std::string newMessageId = generateMessageId();
 
     if (!lastMessageId.empty()) {
-        logger->info("同步断线期间丢失的消息，从 {} 到 {}",
+        logger->error("同步断线期间丢失的消息，从 {} 到 {}",
                      lastMessageId, newMessageId);
 
         if (statusChangeCallback) {
@@ -396,4 +405,27 @@ socket_t WsConnectionManager::hostnameConnect(const std::string& hostname, int p
     }
     freeaddrinfo(result);
     return sockfd;
+}
+
+void WsConnectionManager::startHeartbeat() {
+    stopHeartbeat();
+    
+    heartbeatTask = plugin->getServer().getScheduler().runTaskTimer([this]() {
+        sendHeart();
+    }, 0, 10 * 20);
+    
+    logger->debug("心跳任务已启动，间隔 10 秒");
+}
+
+void WsConnectionManager::stopHeartbeat() {
+    if (heartbeatTask) {
+        heartbeatTask->cancel();
+        heartbeatTask.reset();
+        logger->debug("心跳任务已停止");
+    }
+}
+
+void WsConnectionManager::sendHeart() {
+    std::string heartMsg = "{\"type\":\"heart\"}";
+    SendText(heartMsg);
 }
