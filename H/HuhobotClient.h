@@ -30,24 +30,24 @@ private:
     std::shared_ptr<endstone::Task> heartTask = nullptr;
     std::shared_ptr<endstone::Task> autoDisConnectTask = nullptr;
 
-    json buildMsg(ServerSendEvent event_type,json body,string packId);
+    json buildMsg(ServerSendEvent event_type,json body,std::string packId);
     void shakeHand();
     void shakedProcess();
     void processMessage(const std::string& msg);
 
     //Event Handler
-    void handler_sendConfig(string packId,json &body);
-    void handler_chat(string packId,json &body);
-    void handler_add(string packId,json &body);
-    void handler_delete_(string packId,json &body);
-    void handler_cmd(string packId,json &body);
-    void handler_queryList(string packId,json &body);
-    void handler_queryOnline(string packId,json &body);
-    void handler_shutdown(string packId,json &body);
-    void handler_run(string packId,json &body,bool isAdmin);
-    void handler_heart(string packId,json &body);
-    void handler_bindRequest(string packId,json &body);
-    void handler_shaked(string packId,json &body);
+    void handler_sendConfig(std::string packId,json &body);
+    void handler_chat(std::string packId,json &body);
+    void handler_add(std::string packId,json &body);
+    void handler_delete_(std::string packId,json &body);
+    void handler_cmd(std::string packId,json &body);
+    void handler_queryList(std::string packId,json &body);
+    void handler_queryOnline(std::string packId,json &body);
+    void handler_shutdown(std::string packId,json &body);
+    void handler_run(std::string packId,json &body,bool isAdmin);
+    void handler_heart(std::string packId,json &body);
+    void handler_bindRequest(std::string packId,json &body);
+    void handler_shaked(std::string packId,json &body);
 
 public:
     BotClient(Logger* logger, endstone::Plugin* plugin);

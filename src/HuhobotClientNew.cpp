@@ -10,6 +10,7 @@
 #include <algorithm>
 
 using endstone::Logger;
+using std::string;
 
 enum class ServerSendEvent {
     sendMsg,
